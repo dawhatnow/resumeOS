@@ -1,0 +1,20 @@
+[project]
+name = "resumeOS"
+version = "0.1.0"
+dependencies = [
+    "typer",
+    "pypdf",
+    "pdfplumber",
+    "pyyaml",
+    "httpx",
+    "beautifulsoup4",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+resume = "app.cli:app"
+
+[tool.pytest.ini_options]
+markers = ["network: tests that hit real external URLs (run explicitly, not part of the default suite)"]
