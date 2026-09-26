@@ -16,6 +16,16 @@ def say(message: str = "") -> None:
     console.print(message)
 
 
+def show(renderable) -> None:
+    """Print a Rich layout (table/grid). Unlike say(), it wraps to the terminal
+    width with hanging indents instead of spilling to column 0. A str is Rich markup."""
+    if isinstance(renderable, str):
+        from rich.text import Text
+
+        renderable = Text.from_markup(renderable)
+    console.print(renderable, soft_wrap=False)
+
+
 def rule(title: str | None = None) -> None:
     """Full-width line between main blocks only."""
     if title:

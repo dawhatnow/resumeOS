@@ -230,7 +230,6 @@ def _match_job(profile: Profile, source: str | None, pasted: str | None = None) 
     except ValueError as e:
         say_err(cli_ui.error(str(e)))
         return
-    rule("Apply")
     cli_ui.print_plan(posting, analysis, plan, profile)
 
 

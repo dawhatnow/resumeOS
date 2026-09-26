@@ -2,8 +2,12 @@
 
 import re
 
+from rich.columns import Columns
+from rich.table import Table
+from rich.text import Text
+
 from app.models import JobAnalysis, JobPosting, Profile, ResumePlan
-from app.term import DIVIDER, esc, item_id, rule, say
+from app.term import DIVIDER, esc, item_id, rule, say, show
 from app.warehouse import format_counts
 
 
@@ -18,11 +22,13 @@ def item_lines(profile: Profile) -> list[str]:
 
 
 def next_steps(*lines: str) -> str:
+    rows = [re.split(r"\s{2,}", line.strip(), maxsplit=1) for line in lines]
+    width = max((len(r[0]) for r in rows if len(r) == 2), default=0)
     rendered = [DIVIDER, "[bold yellow]Next:[/]"]
-    for line in lines:
-        parts = re.split(r"\s{2,}", line.strip(), maxsplit=1)
+    for parts in rows:
         if len(parts) == 2:
-            rendered.append(f"  [bold cyan]{esc(parts[0])}[/]  [dim]{esc(parts[1])}[/]")
+            pad = " " * (width - len(parts[0]))
+            rendered.append(f"  [bold cyan]{esc(parts[0])}[/]{pad}  [dim]{esc(parts[1])}[/]")
         else:
             rendered.append(f"  [bold cyan]{esc(parts[0])}[/]")
     return "\n".join(rendered)
@@ -234,31 +240,124 @@ def paste_hint(url_ok: bool = False) -> str:
     return f"[dim]Paste {what}, then press [bold]Enter[/]. Blank lines in the paste are fine.[/]"
 
 
+_MUST_STYLE = "bold bright_green"
+_NICE_STYLE = "green"
+_KEYWORD_STYLE = "cyan"
+
+
 def print_plan(posting: JobPosting, analysis: JobAnalysis, plan: ResumePlan, profile: Profile) -> None:
-    label = posting.title or posting.company or posting.source
-    say(f"[bold]Job:[/] {esc(label)}")
-    if posting.url:
-        say(f"[dim]{esc(posting.url)}[/]")
-    say(f"[bold]Must-haves:[/] {esc(plan.coverage)}")
-    if analysis.missing:
-        say(f"[yellow]Missing from warehouse:[/] {esc(', '.join(analysis.missing))}")
-    elif analysis.must_have:
-        say("[dim]No must-have gaps in the warehouse (coverage is for this pick list).[/]")
+    from app.analyzing.analyzer import inventory_keys, profile_vocabulary, requirement_keys
+    from app.analyzing.terms import TermIndex
+
+    index = TermIndex(profile_vocabulary(profile))
+    rule(esc(posting.title or "Job"))
+    source = posting.url or f"pasted · {len(posting.raw_text.split())} words"
+    say(f"[dim]{esc(source)}[/]")
     say("")
-    say("[bold]Keep[/]  [dim](weak match still ships — this is not a gate)[/]")
-    for pick in plan.selected:
-        item = profile.find_item(pick.item_id)
-        title = item.title if item else pick.item_id
-        org = f" @ {item.org}" if item and item.org else ""
-        say(f"  {item_id(pick.item_id)} [bold]{esc(title)}{esc(org)}[/]  [cyan]{pick.score:.0f}[/]  [dim]{esc(pick.reason)}[/]")
-        if item:
-            for bid in pick.bullet_ids:
-                bullet = profile.find_bullet(bid)
-                if bullet:
-                    say(f"    [dim]-[/] {esc(bullet.text)}")
+
+    inventory = inventory_keys(profile, index)
+    covered = set(plan.covered)
+
+    def mark(term: str) -> Text:
+        if term in covered:
+            return Text(f"✓ {term}", style="green")
+        if any(term in g and covered.intersection(g) for g in analysis.alternatives):
+            return Text(f"✓ {term}", style="dim green")  # an either/or sibling is covered
+        if requirement_keys(term, analysis.alternatives, index) & inventory:
+            return Text(f"○ {term}", style="yellow")
+        return Text(f"✗ {term}", style="red")
+
+    def chips(terms: list[str]) -> Columns:
+        return Columns([mark(t) for t in terms], padding=(0, 3))
+
+    grid = Table.grid(padding=(0, 2))
+    grid.add_column(no_wrap=True)
+    grid.add_column(ratio=1)
+    if analysis.must_have:
+        head = Text.assemble(("Must-haves: ", "bold"), (plan.coverage, "bold"), "  ", _bar(plan.must_have_hit, plan.must_have_total))
+        grid.add_row(head, chips(analysis.must_have))
+    else:
+        grid.add_row(Text("Must-haves:", style="bold"), Text("none found in this posting", style="dim"))
+    if analysis.nice_to_have:
+        nice_hit = sum(1 for t in analysis.nice_to_have if t in covered)
+        grid.add_row(
+            Text.assemble(("Nice-to-have: ", "bold"), f"{nice_hit}/{len(analysis.nice_to_have)}"),
+            chips(analysis.nice_to_have),
+        )
+    show(grid)
+    show(
+        "[dim][green]✓[/] on this resume   [yellow]○[/] in your warehouse, not in these picks   "
+        "[red]✗[/] not in your warehouse   [dim green]✓[/] an either/or option is covered[/]"
+    )
+
+    styles = {index.key(t): _KEYWORD_STYLE for t in analysis.keywords}
+    styles.update({index.key(t): _NICE_STYLE for t in analysis.nice_to_have})
+    styles.update({index.key(t): _MUST_STYLE for t in analysis.must_have})
+    top = max((p.score for p in plan.selected), default=0) or 1
+    say("")
+    say("[bold]Keep[/] [dim]— best matches first; a weak match still makes a resume[/]")
+    say("")
+    for label, prefix in (("Experience", "exp."), ("Projects", "proj.")):
+        picks = [p for p in plan.selected if p.item_id.startswith(prefix)]
+        if not picks:
+            continue
+        say(f"[bold blue]{label}[/]")
+        for pick in picks:
+            item = profile.find_item(pick.item_id)
+            if item is None:
+                continue
+            _print_pick(pick, item, profile, index, styles, top)
+            say("")
+
     if plan.excluded:
-        say("")
-        say("[dim]On the bench:[/] " + " ".join(item_id(i) for i in plan.excluded))
+        benched = []
+        for iid in plan.excluded:
+            item = profile.find_item(iid)
+            benched.append(f"{item_id(iid)} [dim]{esc(item.title) if item else ''}[/]")
+        show("[dim]On the bench:[/] " + "   ".join(benched))
+
+
+def _bar(hit: int, total: int, width: int = 12) -> Text:
+    filled = round(width * hit / total) if total else 0
+    color = "green" if hit * 3 >= total * 2 else "yellow" if hit * 3 >= total else "red"
+    return Text.assemble(("━" * filled, color), ("━" * (width - filled), "grey35"))
+
+
+def _print_pick(pick, item, profile: Profile, index, styles: dict[str, str], top: float) -> None:
+    dots = round(5 * pick.score / top)
+    head = Text.assemble(
+        (f"[{pick.item_id}]", "bold cyan"),
+        " ",
+        (item.title, "bold"),
+        (f" · {item.org}" if item.org else "", "dim"),
+        "  ",
+        ("●" * dots, "cyan"),
+        ("○" * (5 - dots), "grey35"),
+    )
+    show(head)
+    reason = pick.reason.removeprefix("matches: ")
+    if pick.reason.startswith("matches: "):
+        say(f"   [dim]matches[/] {esc(reason)}")
+    else:
+        say("   [dim]no keyword overlap — fills the slot[/]")
+    bullets = Table.grid(padding=(0, 1))
+    bullets.add_column(width=4, justify="right")
+    bullets.add_column(ratio=1)
+    for bid in pick.bullet_ids:
+        bullet = profile.find_bullet(bid)
+        if bullet:
+            bullets.add_row(Text("•", style="dim"), _highlight(bullet.text, index, styles))
+    show(bullets)
+
+
+def _highlight(text: str, index, styles: dict[str, str]) -> Text:
+    """Bullet text with the job's terms coloured where they appear."""
+    out = Text(text)
+    for start, end, key in index.find_spans(text):
+        style = styles.get(key) or next((styles[k] for k in index.expand([key]) if k in styles), None)
+        if style:
+            out.stylize(style, start, end)
+    return out
 
 
 def after_plan() -> str:
@@ -271,12 +370,16 @@ def after_plan() -> str:
 
 def print_profile(profile: Profile) -> None:
     p = profile.personal
-    say(f"[bold cyan]Name:[/]    {esc(p.name) or '[dim]none[/]'}")
-    say(f"[bold cyan]Email:[/]   {esc(p.email) or '[dim]none[/]'}")
-    say(f"[bold cyan]Phone:[/]   {esc(p.phone) or '[dim]none[/]'}")
-    links = ", ".join(p.links) if p.links else None
-    say(f"[bold cyan]Links:[/]   {esc(links) if links else '[dim]none found[/]'}")
-    say(f"[bold cyan]Summary:[/] {esc(profile.summary) if profile.summary else '[dim]none found[/]'}")
+    none = Text("none found", style="dim")
+    grid = Table.grid(padding=(0, 1))
+    grid.add_column(style="bold cyan", no_wrap=True)
+    grid.add_column(ratio=1)
+    grid.add_row("Name:", Text(p.name) if p.name else none)
+    grid.add_row("Email:", Text(p.email) if p.email else none)
+    grid.add_row("Phone:", Text(p.phone) if p.phone else none)
+    grid.add_row("Links:", Text("\n".join(p.links)) if p.links else none)
+    grid.add_row("Summary:", Text(profile.summary) if profile.summary else none)
+    show(grid)
 
     rule("Experience")
     say(f"[bold blue]Experience ({len(profile.experiences)}):[/]")
@@ -284,16 +387,14 @@ def print_profile(profile: Profile) -> None:
         org = f" [dim]@ {esc(item.org)}[/]" if item.org else ""
         dates = f" [dim]({esc(item.dates)})[/]" if item.dates else ""
         say(f"  {item_id(item.id)} [bold]{esc(item.title)}[/]{org}{dates}")
-        for bullet in item.bullets:
-            say(f"    [dim]-[/] {esc(bullet.text)}")
+        _print_bullets(item)
 
     rule("Projects")
     say(f"[bold magenta]Projects ({len(profile.projects)}):[/]")
     for item in profile.projects:
         tech = f" [green]\\[{esc(', '.join(item.tech))}][/]" if item.tech else ""
         say(f"  {item_id(item.id)} [bold]{esc(item.title)}[/]{tech}")
-        for bullet in item.bullets:
-            say(f"    [dim]-[/] {esc(bullet.text)}")
+        _print_bullets(item)
 
     rule("Education")
     say(f"[bold blue]Education ({len(profile.education)}):[/]")
@@ -302,4 +403,13 @@ def print_profile(profile: Profile) -> None:
 
     skills = ", ".join(profile.skills) if profile.skills else None
     say("")
-    say(f"[bold green]Skills:[/] {esc(skills) if skills else '[dim]none found[/]'}")
+    show(f"[bold green]Skills:[/] {esc(skills) if skills else '[dim]none found[/]'}")
+
+
+def _print_bullets(item) -> None:
+    grid = Table.grid(padding=(0, 1))
+    grid.add_column(width=4, justify="right")
+    grid.add_column(ratio=1)
+    for bullet in item.bullets:
+        grid.add_row(Text("•", style="dim"), Text(bullet.text))
+    show(grid)

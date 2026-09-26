@@ -113,6 +113,8 @@ class ResumePlan:
     scores: dict[str, float] = field(default_factory=dict)
     must_have_hit: int = 0
     must_have_total: int = 0
+    # Must/nice terms the selected picks back up (directly or implied, e.g. PostgreSQL → SQL).
+    covered: list[str] = field(default_factory=list)
 
     @property
     def coverage(self) -> str:

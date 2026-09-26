@@ -11,6 +11,10 @@ class JobAnalyzer:
 
     def analyze(self, posting: JobPosting, profile: Profile) -> JobAnalysis:
         posting.clean_text = self._cleaner.clean(posting.raw_text)
+        if not posting.title:
+            first = posting.clean_text.split("\n", 1)[0].strip()
+            if 0 < len(first) <= 80 and not first.endswith("."):
+                posting.title = first
         vocabulary = profile_vocabulary(profile)
         must, nice, keywords, groups = self._keywords.extract(posting.clean_text, vocabulary)
         index = TermIndex(vocabulary)
@@ -43,6 +47,9 @@ def inventory_keys(profile: Profile, index: TermIndex) -> set[str]:
     found = {index.key(t) for t in profile_vocabulary(profile)}
     for term in profile_vocabulary(profile):
         found.update(index.find(term))  # "HTML/CSS" → html, css
+    found.update(index.find(profile.summary or ""))
+    for edu in profile.education:
+        found.update(index.find(" ".join([edu.degree or "", *edu.details])))
     for item in profile.all_items():
         found.update(index.key(t) for t in item.tech)
         found.update(index.find(item.title))

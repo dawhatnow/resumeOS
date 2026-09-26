@@ -17,13 +17,15 @@ class ResumePlanner:
         selected_ids = {p.item_id for p in selected}
         excluded = [item.id for item in profile.all_items() if item.id not in selected_ids]
         scores = {**exp_scores, **proj_scores}
-        hit, total = self._coverage(analysis, profile, selected, scorer, index)
+        covered = self._covered_keys(profile, selected, scorer)
+        hit, total = self._coverage(analysis, covered, index)
         return ResumePlan(
             selected=selected,
             excluded=excluded,
             scores=scores,
             must_have_hit=hit,
             must_have_total=total,
+            covered=[t for t in analysis.must_have + analysis.nice_to_have if index.key(t) in covered],
         )
 
     def _pick(
@@ -48,16 +50,7 @@ class ResumePlanner:
         ranked.sort(key=lambda p: p.score, reverse=True)
         return ranked[:limit], scores
 
-    def _coverage(
-        self,
-        analysis: JobAnalysis,
-        profile: Profile,
-        selected: list[PlannedPick],
-        scorer: BulletScorer,
-        index: TermIndex,
-    ) -> tuple[int, int]:
-        if not analysis.must_have:
-            return 0, 0
+    def _covered_keys(self, profile: Profile, selected: list[PlannedPick], scorer: BulletScorer) -> set[str]:
         covered: set[str] = set()
         for pick in selected:
             item = profile.find_item(pick.item_id)
@@ -65,6 +58,11 @@ class ResumePlanner:
                 continue
             bullets = [b for b in (profile.find_bullet(bid) for bid in pick.bullet_ids) if b]
             covered.update(scorer.item_terms(item, bullets))
+        return covered
+
+    def _coverage(self, analysis: JobAnalysis, covered: set[str], index: TermIndex) -> tuple[int, int]:
+        if not analysis.must_have:
+            return 0, 0
         # Each either/or group counts as one requirement.
         units: list[set[str]] = []
         for term in analysis.must_have:
