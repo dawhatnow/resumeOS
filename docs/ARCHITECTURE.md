@@ -87,3 +87,9 @@ under WSL.
 
 `tests/unit/` — import regressions, merge/add, store round-trip, path
 resolution, CLI (`show`, `add`, merge-without-warehouse).
+
+## M2 — apply (added; M1 above is unchanged)
+
+`resume new` → `JobMatcher` (`app/apply.py`): fetch/clean JD, keyword-match
+the warehouse, print a top-N plan. Always prints; coverage is not a gate.
+See `docs/milestones/M2.md`.

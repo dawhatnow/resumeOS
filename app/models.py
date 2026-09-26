@@ -73,3 +73,47 @@ class Profile:
                 if bullet.id == source_id:
                     return bullet
         return None
+
+
+# --- M2: apply / match (JD → plan). Warehouse types above stay as-is. ---
+
+
+@dataclass
+class JobPosting:
+    url: str
+    source: str
+    company: str | None = None
+    title: str | None = None
+    raw_text: str = ""
+    clean_text: str = ""
+
+
+@dataclass
+class JobAnalysis:
+    must_have: list[str] = field(default_factory=list)
+    nice_to_have: list[str] = field(default_factory=list)
+    keywords: list[str] = field(default_factory=list)
+    missing: list[str] = field(default_factory=list)
+    # Either/or requirements ("Tableau, Power BI, or similar"): one is enough.
+    alternatives: list[list[str]] = field(default_factory=list)
+
+
+@dataclass
+class PlannedPick:
+    item_id: str
+    bullet_ids: list[str]
+    reason: str
+    score: float = 0.0
+
+
+@dataclass
+class ResumePlan:
+    selected: list[PlannedPick] = field(default_factory=list)
+    excluded: list[str] = field(default_factory=list)
+    scores: dict[str, float] = field(default_factory=dict)
+    must_have_hit: int = 0
+    must_have_total: int = 0
+
+    @property
+    def coverage(self) -> str:
+        return f"{self.must_have_hit}/{self.must_have_total}"

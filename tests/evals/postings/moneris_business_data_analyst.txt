@@ -1,0 +1,72 @@
+Business Data Analyst
+Moneris — Toronto, ON
+Source: Indeed JOBSEARCH_100008, posted 2026-09-25
+
+Your Moneris Career - The Opportunity
+
+We are looking for a Business Data Analyst to join our analytics team and help deliver data-driven insights across product performance, customer onboarding, operational efficiency, and business reporting.
+
+In this role, you will work with large datasets, build and maintain reports and dashboards, analyze business trends, and provide leadership teams with accurate, actionable insights. You will partner with stakeholders across Product, Operations, Sales, Finance, and Customer Experience to measure performance, identify opportunities, and support informed decision-making.
+
+This is an opportunity for someone who enjoys solving business problems through data, improving reporting processes, and translating complex information into clear recommendations. The successful candidate will contribute to reliable reporting, stronger business insights, and increased visibility into product and operational performance.
+
+Location: You will be based in our Etobicoke office, balancing in-office collaboration with remote flexibility.
+
+Reporting Relationship : You will report to the Manager, Analytics – Product & Operations.
+
+Posting Type: Replacement.
+
+Salary Range: The expected base salary range for this role is $71,000 - $100,000.
+
+Total compensation may also include variable or discretionary incentive components, including but not limited to bonuses and commissions. Individual job offers are determined by various factors, including experience, education, skills, certifications, and other business needs.
+
+Your Moneris Career - What you'll do
+
+Build, maintain, and enhance recurring reports, dashboards, scorecards, and analytical outputs used by business and leadership teams.
+Analyze trends across product performance, customer onboarding, operational service levels, revenue, customer experience, sales channels, and business process efficiency.
+Extract, validate, and analyze data from multiple systems using SQL, Excel, BI tools, and other analytics platforms.
+Translate business questions into clear analysis, insights, and recommendations for technical and non-technical stakeholders.
+Support recurring reporting cycles, leadership updates, performance reviews, and ad hoc analytical requests.
+Partner with stakeholders to define reporting requirements, establish metric definitions, validate assumptions, and ensure reporting accuracy.
+Identify data quality issues, reporting gaps, process inefficiencies, and opportunities to automate and improve reporting processes.
+Maintain documentation for key reports, dashboards, data sources, metrics, assumptions, and business rules.
+Contribute to analytics modernization initiatives, including dashboard enhancements, reporting automation, data model improvements, and migration to modern data platforms.
+
+Your Moneris Career - What you bring
+
+Required skills and experience
+
+Bachelor’s degree in Business Analytics, Data Analytics, Statistics, Finance, Accounting, Computer Science, Business Administration, or a related field. Equivalent work experience may be considered.
+3–5 years of experience in a Data Analyst, Reporting Analyst, Business Analyst, Product Analyst, Operations Analyst, or similar role.
+Experience building and maintaining reports, dashboards, or recurring business performance reporting.
+Experience partnering with business stakeholders to gather requirements and deliver data-driven insights.
+Strong SQL skills, including joins, aggregations, common table expressions, data validation, and analysis of large datasets.
+Advanced Excel skills, including formulas, pivot tables, lookups, data preparation, and structured analysis.
+Experience with BI and data visualization tools such as Tableau, Power BI, or similar platforms.
+Experience analyzing data from multiple sources to identify trends, issues, and business implications.
+
+Experience that would set you apart
+
+Experience in payments, financial services, technology, product analytics, operations analytics, or customer experience analytics.
+Experience with Python, Jupyter Notebook, Snowflake, dbt, reporting automation tools, or statistical analysis.
+
+Your Moneris Career - What you get
+
+At Moneris, we believe in empowering you to succeed—personally and professionally. As part of our team, you'll have access to resources, opportunities, and an inclusive environment that supports your development and career.
+
+Comprehensive Total Rewards Program, including performance-based bonuses, flexible benefits starting from day one, and your choice of a health spending account (HSA) or personal spending account (PSA).
+Retirement planning support, with profit-sharing programs including company match and a defined contribution pension plan.
+Growth & development opportunities, including unlimited access to Coursera, mentorship programs, and an internal gig marketplace.
+Holistic wellness support, with an Employee & Family Assistance Program, 24/7 virtual healthcare, and workplace wellness initiatives.
+Flexibility that works for you, including hybrid work arrangements, a Work from Abroad program, and paid time off programs.
+Recognition and rewards, with company-wide recognition programs, exclusive banking perks from RBC & BMO, and access to great employee discounts.
+
+#LI-Hybrid
+
+#OTH-IND
+
+Note: We welcome and encourage applications from Indigenous peoples, people of colour, people with disabilities, people of all genders, sexual orientation and intersectional identities.
+
+AI Disclosure: We may use AI-enabled tools to screen, select, and assess applications. All AI outputs are reviewed and validated by our recruitment team.
+
+We acknowledge that people from equity-deserving groups (including racialized individuals, women, gender diverse individuals, individuals with disabilities, neurodivergent individuals, members of 2SLGBTQIA+ communities and those born outside of Canada) are less likely to apply for jobs unless they feel they meet all the requirements posted. At Moneris, we believe candidates bring experience to their work in many ways. We encourage you to apply and share, in the application form, the transferrable experience you bring, and how this will support your success in this role.

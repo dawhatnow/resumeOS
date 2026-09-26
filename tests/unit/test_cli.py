@@ -91,10 +91,11 @@ def test_init_skips_when_warehouse_exists(tmp_path, monkeypatch):
     store = ProfileStore(tmp_path / "profile.yaml")
     _seed(store)
     monkeypatch.setattr("app.cli.ProfileStore", lambda: store)
-    result = runner.invoke(app, ["init"])
+    result = runner.invoke(app, ["init"], input="quit\n")
     assert result.exit_code == 0
     assert "Already set up" in result.stdout
     assert "[exp.1]" in result.stdout
+    assert "What next?" in result.stdout
 
 
 def test_init_imports_first_pdf(tmp_path, monkeypatch):
@@ -103,12 +104,26 @@ def test_init_imports_first_pdf(tmp_path, monkeypatch):
     store = ProfileStore(tmp_path / "profile.yaml")
     monkeypatch.setattr("app.cli.ProfileStore", lambda: store)
     pdf = Path(__file__).resolve().parents[2] / "samples" / "swe.pdf"
-    result = runner.invoke(app, ["init", str(pdf)], input="n\n")
+    result = runner.invoke(app, ["init", str(pdf)], input="n\nquit\n")
     assert result.exit_code == 0
     assert "Imported." in result.stdout
     assert "warehouse is ready" in result.stdout
     assert store.exists()
     assert store.load().personal.name == "Jane Doe"
+
+
+def test_init_loop_paste_then_quit(tmp_path, monkeypatch):
+    store = ProfileStore(tmp_path / "profile.yaml")
+    _seed(store)
+    monkeypatch.setattr("app.cli.ProfileStore", lambda: store)
+    result = runner.invoke(
+        app,
+        ["init"],
+        input="paste\nNeed Python and Go.\n\nquit\n",
+    )
+    assert result.exit_code == 0
+    assert "Keep" in result.stdout
+    assert "What next?" in result.stdout
 
 
 def test_import_merge_without_warehouse_errors(tmp_path, monkeypatch):

@@ -2,7 +2,7 @@
 
 import re
 
-from app.models import Profile
+from app.models import JobAnalysis, JobPosting, Profile, ResumePlan
 from app.term import DIVIDER, esc, item_id, rule, say
 from app.warehouse import format_counts
 
@@ -130,9 +130,9 @@ def home(profile: Profile | None, path: str) -> str:
             "[bold]In warehouse:[/]",
             items,
             next_steps(
+                "resume new <url|file|->               match this warehouse to a job",
                 "resume import --merge <pdf>           add another resume",
                 "resume add experience                 type a job",
-                "resume add project                    type a project",
                 "resume show                           see full bullets",
             ),
         ]
@@ -164,7 +164,7 @@ def init_welcome() -> str:
         [
             "[bold bright_cyan]Resume OS[/]",
             "[dim]We'll build one warehouse from every resume you have —[/]",
-            "[dim]SWE, DS, PM, whatever. Apply comes later; this is setup.[/]",
+            "[dim]SWE, DS, PM, whatever. Then stay here: paste a job or update.[/]",
             "",
         ]
     )
@@ -182,10 +182,23 @@ def already_inited(profile: Profile, path: str) -> str:
             "[bold]In warehouse:[/]",
             items,
             next_steps(
-                "resume import --merge <pdf>           add another resume",
-                "resume add experience                 type a job",
-                "resume show                           see full bullets",
+                "paste                                 match a job (JD / URL / file)",
+                "update                                add another resume or type work",
+                "show / quit",
             ),
+        ]
+    )
+
+
+def session_menu() -> str:
+    return "\n".join(
+        [
+            DIVIDER,
+            "[bold]What next?[/]",
+            "  [bold cyan]paste[/]   [dim]job description, URL, or JD file — pick from warehouse[/]",
+            "  [bold cyan]update[/]  [dim]merge another resume PDF, or type a job / project / bullet[/]",
+            "  [bold cyan]show[/]    [dim]full warehouse[/]",
+            "  [bold cyan]quit[/]    [dim]leave[/]",
         ]
     )
 
@@ -194,16 +207,16 @@ def after_init(profile: Profile, saved: str) -> str:
     items = "\n".join(item_lines(profile)) or "  [dim](no jobs or projects parsed)[/]"
     return "\n".join(
         [
-            "[bold green]Done:[/] warehouse is ready. You can close the terminal and come back anytime.",
+            "[bold green]Done:[/] warehouse is ready. Stay in this session or quit and come back with resume init.",
             f"      [bold]{esc(format_counts(profile))}[/]",
             f"      [dim]saved to {esc(saved)}[/]",
             DIVIDER,
             "[bold]In warehouse:[/]",
             items,
             next_steps(
-                "resume import --merge <pdf>           add another resume later",
-                "resume add experience                 type work that wasn't on a PDF",
-                "resume show                           see full bullets and IDs",
+                "paste                                 match a job",
+                "update                                add a resume or type work",
+                "show / quit",
             ),
         ]
     )
@@ -214,6 +227,46 @@ def error(message: str, next_line: str | None = None) -> str:
     if next_line:
         lines.append(f"[bold yellow]Next:[/]  [bold cyan]{esc(next_line)}[/]")
     return "\n".join(lines)
+
+
+def paste_hint(url_ok: bool = False) -> str:
+    what = "the job description, or a URL / file path" if url_ok else "the job description"
+    return f"[dim]Paste {what}, then press [bold]Enter[/]. Blank lines in the paste are fine.[/]"
+
+
+def print_plan(posting: JobPosting, analysis: JobAnalysis, plan: ResumePlan, profile: Profile) -> None:
+    label = posting.title or posting.company or posting.source
+    say(f"[bold]Job:[/] {esc(label)}")
+    if posting.url:
+        say(f"[dim]{esc(posting.url)}[/]")
+    say(f"[bold]Must-haves:[/] {esc(plan.coverage)}")
+    if analysis.missing:
+        say(f"[yellow]Missing from warehouse:[/] {esc(', '.join(analysis.missing))}")
+    elif analysis.must_have:
+        say("[dim]No must-have gaps in the warehouse (coverage is for this pick list).[/]")
+    say("")
+    say("[bold]Keep[/]  [dim](weak match still ships — this is not a gate)[/]")
+    for pick in plan.selected:
+        item = profile.find_item(pick.item_id)
+        title = item.title if item else pick.item_id
+        org = f" @ {item.org}" if item and item.org else ""
+        say(f"  {item_id(pick.item_id)} [bold]{esc(title)}{esc(org)}[/]  [cyan]{pick.score:.0f}[/]  [dim]{esc(pick.reason)}[/]")
+        if item:
+            for bid in pick.bullet_ids:
+                bullet = profile.find_bullet(bid)
+                if bullet:
+                    say(f"    [dim]-[/] {esc(bullet.text)}")
+    if plan.excluded:
+        say("")
+        say("[dim]On the bench:[/] " + " ".join(item_id(i) for i in plan.excluded))
+
+
+def after_plan() -> str:
+    return next_steps(
+        "resume new <url|file|->               try another job",
+        "resume show                           edit the warehouse",
+        "(PDF export is M3 — not built yet)",
+    )
 
 
 def print_profile(profile: Profile) -> None:

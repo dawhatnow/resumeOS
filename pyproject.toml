@@ -13,6 +13,8 @@ dependencies = [
     "pypdf",
     "pdfplumber",
     "pyyaml",
+    "httpx",
+    "beautifulsoup4",
 ]
 
 [project.optional-dependencies]

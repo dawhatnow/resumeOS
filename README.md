@@ -44,4 +44,16 @@ export RESUME_HOME=/tmp/resume-m1-demo
 resume init samples/swe.pdf
 ```
 
-Technical guides: `docs/milestones/`. Tests: `pytest tests/unit`.
+## Apply a job (M2)
+
+Warehouse must already exist (`resume init`).
+
+```bash
+resume new ./jd.txt
+resume new https://example.com/jobs/123
+resume new -
+```
+
+Prints a Keep list and `Must-haves: 3/9`. Low coverage still ships. PDF export is M3.
+
+Technical guides: `docs/milestones/` (M1 manual stays as-is). Tests: `pytest tests/unit`.

@@ -1,0 +1,89 @@
+Associate AI Engineer
+ShyftLabs — Toronto, ON
+Source: Indeed JOBSEARCH_100001, posted 2026-05-13
+
+About ShyftLabs
+
+At ShyftLabs, we live and breathe data. Since 2020, we’ve been helping Fortune 500 companies unlock growth through innovative digital solutions that drive real business impact. With teams across Canada, the U.S., and India, we’re growing quickly and looking for curious, motivated individuals who are excited to learn, build, and solve meaningful problems with technology.
+
+The Opportunity
+
+ShyftLabs is looking for an Associate AI Engineer (New Grad) to join our growing engineering team. This is an exciting opportunity for a recent graduate or early-career engineer who wants to work at the intersection of AI/ML and backend software development.
+
+In this role, you’ll help design and build AI-powered features that are integrated directly into real-world applications and data platforms. You’ll work closely with experienced engineers, product managers, and architects to develop scalable backend services, integrate AI tools and APIs, and contribute to production-ready systems used by enterprise clients.
+
+This is a hands-on engineering role with strong mentorship and learning opportunities, ideal for someone who enjoys both software development and applied AI technologies.
+
+What You'll Do
+
+Assist in building and integrating AI-powered features into backend applications and workflows
+
+Work with LLM APIs, machine learning models, and automation pipelines to support intelligent product experiences
+
+Develop and maintain backend APIs, microservices, and integrations using modern development frameworks
+
+Collaborate with cross-functional teams to understand business requirements and translate them into technical solutions
+
+Support the development of scalable data pipelines and workflows for AI-enabled applications
+
+Participate in testing, debugging, monitoring, and improving production systems
+
+Contribute to technical documentation, API specifications, and architecture discussions
+
+Learn and apply best practices in software engineering, cloud development, and AI integration
+
+Participate in code reviews and collaborate with senior engineers to improve code quality and system reliability
+
+Stay current with emerging AI/ML technologies, tools, and engineering practices
+
+What You Bring
+
+Bachelor’s degree in Computer Science, Software Engineering, Data Science, AI, or a related field
+
+Internship, co-op, academic project, or personal project experience in software engineering, AI/ML, or backend development
+
+Proficiency in Python and familiarity with libraries or frameworks such as TensorFlow, PyTorch, or Scikit-learn
+
+Understanding of backend development concepts such as APIs, microservices, and databases
+
+Familiarity with JavaScript/TypeScript or Node.js is considered an asset
+
+Exposure to REST APIs, SQL, and cloud platforms such as AWS or GCP through coursework, internships, or projects
+
+Interest in AI/ML technologies, including LLMs and intelligent automation tools
+
+Strong problem-solving skills and willingness to learn new technologies quickly
+
+Good communication and collaboration skills in a team environment
+
+Understanding of software development fundamentals, including testing, version control, and Agile development practices
+
+Nice to Have
+
+Experience working on personal, academic, or hackathon projects involving AI or data platforms
+
+Familiarity with tools such as Docker, Git, Kafka, or cloud deployment workflows
+
+Exposure to data engineering, ETL pipelines, or analytics systems
+
+Interest in scalable distributed systems or event-driven architectures
+
+Contributions to open-source projects, technical clubs, or developer communities
+
+Salary Range
+$60,000 - $80,000 (CAD)
+Why You’ll Love Working at ShyftLabs
+
+At ShyftLabs, your work matters. We’re a growing data product company making a big impact with Fortune 500 clients and as we scale, you’ll have the chance to shape solutions, influence strategy, and grow your career alongside us.
+
+Here’s what you can expect when you join our team:
+-Hybrid Flexibility: Enjoy a hybrid model with three days per week in our Toronto office.
+-Downtown Toronto Office: Work in the heart of the city.
+-Comprehensive Benefits: We cover 100% of health, dental, and vision insurance premiums for you and your dependents which means no out-of-pocket costs. Eligibility starts from day one itself.
+-Growth & Learning: Access extensive learning and development resources to keep leveling up your skills.
+
+Inclusion at ShyftLabs
+
+We’re building something big, and we want you on the journey with us. If you’re ready to use data and innovation to make an impact, apply today and let’s grow together.
+
+ShyftLabs is an equal-opportunity employer committed to creating a safe, diverse, and inclusive environment. We encourage applicants of all backgrounds including ethnicity, religion, disability status, gender identity, sexual orientation, family status, age, and nationality to apply. If you require accommodation during the interview process, let us know and we’ll be happy to support you.

@@ -1,0 +1,76 @@
+Full Stack Developer
+InfoTrack Canada — Toronto, ON
+Source: Indeed JOBSEARCH_100021, posted 2026-07-22
+
+*ABOUT INFOTRACK CANADA*
+
+InfoTrack Canada is a fast-growing legal technology company modernizing the infrastructure that connects law firms, notaries, conveyancers, lenders, government registries and other ecosystems partners.
+
+We're providing solutions to improve how legal professionals search, transact, and close, providing much needed innovation and choice. This is a senior opportunity at a company investing heavily in Canada and expanding nationally from our base in Ontario with urgency.
+
+At InfoTrack, our company culture is often described as uniquely outstanding and the best many of our people have experienced in their careers. As a flexible, forward-thinking, and inclusive employer, we embrace individuality. We value your strengths and encourage you to pursue a sense of accomplishment in our supportive and dynamic culture. InfoTrack is a place where you can grow and develop in your career, all while being your authentic self.
+
+We are growing our development team and looking to bring on a Full Stack Developer who is excited about a modern, AI-augmented way of building software: someone who ships quickly, works closely with product and design, and cares about what we build as much as how we build it.
+
+You will join a small, high-trust squad where engineers, product, and design make decisions together. You will pair with AI coding tools like Claude Code as a core part of your daily workflow, move features from idea to production fast, and grow your skills alongside experienced engineers on a platform used by legal professionals every day. This is a builder’s role for someone who treats the product as their own.
+
+You will help build software that real legal professionals rely on every day, at a global, award-winning company that moves fast, trusts its engineers, and is investing in a modern, AI-first way of working. Your ideas about the product will be heard and shipped.
+
+*WHAT YOU'LL DO*
+
+* *Build and ship full-stack features *across our React/TypeScript front end and C#/.NET back end, taking them from idea to production fast.
+* *Work as part of a squad *alongside product and design, contributing to scope, priorities, and trade-offs rather than waiting for tickets.
+* *Use AI to move faster *by pairing with agentic coding tools such as Claude Code to accelerate development, raise quality, and spend more time on the hard, high-judgement problems.
+* *Bring a product mindset *by understanding our users, our domain, and the “why” behind features, then using that understanding to ask good questions and propose better solutions.
+* *Contribute to technical decisions *by working within our architecture, patterns, and standards, and speaking up when you see a better way.
+* *Collaborate with our global platform team *across InfoTrack’s international engineering group to build on shared services and contribute back to common infrastructure.
+* *Care about quality *by writing clean, maintainable code, participating in code reviews, and paying attention to performance, reliability, and the user experience.
+
+*WHAT WE'RE LOOKING FOR*
+
+* *Experienced.* 3+ years building and shipping production web applications as a full stack developer.
+* *Capable across the stack.* Comfort with React, TypeScript, HTML/CSS and modern state management on the front end; solid with C# (ASP.NET Core) and relational databases (e.g., PostgreSQL, MySQL) on the back end.
+* *Fast and pragmatic.* You ship iteratively, value speed to market, and know how to balance “good enough to learn” with “built to last.”
+* *AI-forward.* You already use, or are genuinely eager to adopt, AI coding assistants and agentic workflows.
+* *Product-minded.* You want to understand the domain and the user, and you see contributing to product and design decisions as part of the job.
+* *A strong collaborator.* You communicate clearly, work well in a tight-knit squad, and are keen to learn from the engineers around you.
+
+*NICE TO HAVE*
+
+* Experience in legal tech, conveyancing, fintech, or another regulated/document-heavy domain.
+* Cloud platform experience (AWS, Azure, or GCP).
+* Exposure to DevOps, CI/CD, containerization (Docker, Kubernetes), and Agile delivery.
+* Experience working across distributed or global engineering teams.
+
+*OUR STACK*
+
+* Front end: React, TypeScript, modern state management (e.g., Redux, MobX).
+* Back end: C# (ASP.NET Core / Framework).
+* Platform: cloud infrastructure, relational databases, Docker, Kubernetes.
+* Tooling: AI-assisted development with Claude Code and related agentic tools.
+
+*COMPENSATION*
+
+The base salary range for this role is $110,000 – $130,000 CAD annually, plus a performance bonus of up to 10% of base salary tied to team and company metrics. Final compensation will reflect your experience, domain depth, and demonstrated delivery. In accordance with provincial pay transparency legislation — including Ontario’s Pay Transparency Act and British Columbia’s Pay Transparency Act — InfoTrack Canada discloses a pay range for all advertised positions.
+
+*EQUAL OPPORTUNITY & STATUTORY NOTICES*
+
+*Work Authorization *Candidates must be legally eligible to work in Canada and must reside in Canada for the duration of their employment. This role operates on a hybrid basis; regular in-office attendance at our Canadian office is required. InfoTrack Canada does not provide immigration sponsorship for this role at this time.
+
+*Equity, Diversity & Inclusion *InfoTrack Canada is an equal opportunity employer committed to diversity, equity, and inclusion in the workplace. We comply with the Canadian Human Rights Act and all applicable provincial human rights codes. We welcome applications from all qualified individuals, including women, Indigenous Peoples, persons with disabilities, members of visible minorities, and members of the 2SLGBTQIA+ community.
+
+*Accommodation *InfoTrack Canada is committed to an accessible and inclusive recruitment experience. Accommodation is available on request throughout the hiring process, in accordance with the Ontario Human Rights Code, the Accessibility for Ontarians with Disabilities Act (AODA), and applicable provincial accessibility legislation.
+
+*Use of AI in Recruitment *InfoTrack Canada may use artificial intelligence (AI) to support certain administrative aspects of the recruitment process. However, all applications and resumes are carefully reviewed by members of our hiring team, and all screening, evaluation, and hiring decisions are made solely by human decision-makers.
+
+*Role Status *This is a newly created position that has been established to support the continued growth and evolving needs of InfoTrack Canada.
+
+Pay: $110,000.00-$130,000.00 per year
+
+Application question(s):
+* Are you comfortable working in a hybrid model that requires you to be onsite at our Downtown Toronto office 3 days per week?
+
+Location:
+* Toronto, ON (required)
+
+Work Location: Hybrid remote in Toronto, ON (Toronto District)

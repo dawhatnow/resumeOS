@@ -1,0 +1,132 @@
+Data Analyst
+Scotiabank — Toronto, ON
+Source: Indeed JOBSEARCH_100011, posted 2026-08-05
+
+Requisition ID: 269197
+
+Join a purpose driven winning team, committed to results, in an inclusive and high-performing culture.
+
+Team
+
+The Data team within Global Finance & Risk Technology (GFRT) provides enterprise-level analytics, data services, governance support, and operational data management for Global Finance initiatives. The team plays a critical role in supporting financial close processes, financial reporting, data migration initiatives, system implementations, and ongoing operational activities while ensuring the delivery of high-quality Financial Data Management, Data Analysis, Data Quality, and Data Governance services across the organization.
+
+Role
+
+We are seeking a Data Analyst to support business operations through data analysis, reporting, process improvement, system implementation, and operational support activities.
+The role is responsible for delivering analytical insights, managing data migration initiatives, supporting financial and operational processes, and developing solutions that improve efficiency, accuracy, and control effectiveness.
+Working closely with business stakeholders, operations teams, finance partners, and technology teams, the position plays a key role in maintaining data integrity, supporting system transitions, and ensuring successful business outcomes.
+The successful candidate will combine strong technical expertise in data engineering, programming, data analysis, data modeling, and database design with a solid understanding of finance, accounting, and operational processes.
+This individual must be highly analytical, proactive, detail-oriented, and capable of working effectively with stakeholders across Finance, Operations, Technology, and Vendor teams. Experience supporting system implementations, data migrations, financial reconciliations, and process automation initiatives is highly desirable.
+
+What will we expect from you?
+
+Data Analysis & Reporting
+
+Collect, validate, analyze, and interpret data from multiple business systems.
+Develop and maintain reports, dashboards, and performance metrics to support decision-making.
+Conduct ad hoc analysis and provide actionable recommendations to stakeholders.
+Monitor data quality, identify anomalies, and investigate discrepancies.
+
+Process Improvement & Automation
+
+Identify opportunities to streamline and automate operational processes.
+Develop and maintain reporting, reconciliation, and analytical solutions.
+Support the implementation of process enhancements, system upgrades, and operational efficiencies.
+Create and maintain process documentation, user guides, and operational procedures.
+
+Data Migration & System Implementation
+
+Support data migration initiatives involving the transition from legacy systems and local ledgers to enterprise platforms, including PeopleSoft 9.2 (PS92).
+Coordinate data extraction, validation, transformation, and loading activities.
+Establish and validate historical balances and reference data within the new system environment.
+Perform reconciliation activities to ensure completeness and accuracy between source and target systems.
+Collaborate with business and technology stakeholders to resolve migration and conversion issues.
+Support User Acceptance Testing (UAT), parallel runs, production readiness, and go-live activities.
+Provide post-implementation support, including issue investigation, defect resolution, process stabilization, and end-user assistance following deployment.
+
+Stakeholder Management & Governance
+
+Partner with business, operations, finance, and technology teams to gather requirements and deliver solutions.
+Communicate findings, risks, and recommendations to stakeholders and management.
+Support audit requests, control testing, and regulatory compliance requirements.
+Maintain strong governance and control practices over data, reporting, and operational processes.
+
+Operational Support
+
+Support day-to-day operational and financial processes.
+Prepare, review, and coordinate special entries, adjustments, corrections, and related operational transactions.
+Investigate, resolve, and escalate operational issues as required.
+Perform reconciliations and exception analysis to ensure data accuracy and completeness.
+Support month-end, quarter-end, and year-end operational activities.
+
+What You Will Bring to Succeed
+
+Bachelor’s degree in business, Finance, Accounting, Computer Science, Information Systems, Analytics, or a related field.
+3 years of experience in data analysis, reporting, operations support, technology, or a related field.
+Strong foundational knowledge of:
+SQL and data analysis
+Microsoft Excel and data manipulation
+Reporting and dashboard development
+Basic understanding of:
+Database concepts and data structures
+Data validation, reconciliation, and quality control processes
+Software development or data engineering fundamentals
+Experience through work, internships, co-op placements, or academic projects with:
+Data analysis and reporting
+Large datasets and data-driven decision-making
+Process improvement or automation initiatives
+
+Ability to:
+
+Analyze data and identify trends, issues, and anomalies
+Translate business requirements into analytical solutions
+Support testing, implementation, and operational activities
+Learn new technologies and business processes quickly
+Strong analytical, problem-solving, and organizational skills.
+Excellent verbal and written communication skills.
+Ability to work effectively both independently and within a team environment.
+
+ Nice-to-Have Skills:
+
+Python, ACL, SAS, VBA, or similar scripting and automation tools
+BI and visualization tools (Power BI, Tableau, OBIEE, ThoughtSpot)
+ETL tools (DataStage, Informatica, or equivalent)
+OFSAA or other financial data management platforms
+
+Exposure to:
+
+Chart of Accounts (CoA/CoFA) design and financial hierarchies
+Regulatory reporting and risk data environments
+Data lineage, metadata repositories, and governance frameworks
+PeopleSoft 9.2 (PS92) or comparable ERP platforms
+Experience supporting:
+Financial system migrations and ledger conversions
+Financial Close processes
+Audit and regulatory compliance initiatives
+
+Soft Skills Required:
+
+Strong analytical and problem-solving mindset with the ability to resolve complex data and operational issues.
+Highly detail-oriented with a focus on data accuracy, integrity, and control effectiveness.
+Excellent communication and stakeholder management skills across business and technology teams.
+Ability to work proactively and independently in a fast-paced environment.
+Strong collaboration skills with cross-functional teams and external partners.
+Effective prioritization, organization, and multitasking abilities.
+Demonstrated adaptability and willingness to learn new technologies and business processes.
+Reflective and open-minded attitude, with the ability to incorporate feedback for continuous personal and professional growth.
+Strong documentation, governance, and process management capabilities.
+
+The Workplace
+
+We are technology partners who help the business transform how our employees around the world work
+We have an inclusive and collaborative working environment that encourages creativity, curiosity, and celebrates success!
+You'll get to work with and learn from diverse industry leaders, who have hailed from top technology companies around the world
+We foster an environment of innovation and continuous learning
+We care about our people, allowing them to design how they work to deliver amazing results
+We offer a competitive total rewards package, including a performance bonus, company matching programs (on pension & profit sharing), and generous vacation
+
+Location(s): Canada : Ontario : Toronto
+
+Scotiabank is a leading bank in the Americas. Guided by our purpose: "for every future", we help our customers, their families and their communities achieve success through a broad range of advice, products and services, including personal and commercial banking, wealth management and private banking, corporate and investment banking, and capital markets.
+
+At Scotiabank, we value the unique skills and experiences each individual brings to the Bank, and are committed to creating and maintaining an inclusive and accessible environment for everyone. If you require accommodation (including, but not limited to, an accessible interview site, alternate format documents, ASL Interpreter, or Assistive Technology) during the recruitment and selection process, please let our Recruitment team know. Candidates must apply directly online to be considered for this role. We thank all applicants for their interest in a career at Scotiabank; however, only those candidates who are selected for an interview will be contacted.

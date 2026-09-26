@@ -1,0 +1,39 @@
+Junior Technical Analyst (AI & Data Engineering)
+Paradigm Capital Group — Toronto, ON
+Source: Indeed JOBSEARCH_100022, posted 2026-09-16
+
+We are not a traditional firm running on bloated slide decks and manual spreadsheets. We are a tech-native M&A firm replacing old-school deal sourcing with custom LLM pipelines, predictive market mapping, and automated outreach engines.
+
+We’re hiring a Junior Technical Analyst to help engineer the data backbone of our origination platform. You'll work directly at the intersection of high finance, data pipelines, and applied AI.
+
+*What You’ll Actually Do*
+
+* *Build & Tune Data Engines:* Scrape, clean, and structure unstructured B2B market data to feed our deal-sourcing algorithms.
+* *Refine Model Logic:* Optimize prompt frameworks and custom LLM API integrations (OpenAI, Anthropic) to ensure our outreach hits with precision and high context.
+* *Map Emerging Markets:* Run SQL and Python workflows to identify off-market, high-value acquisition targets before anyone else sees them.
+* *Automate Grunt Work:* Continuously spot operational bottlenecks and build scripts or webhooks to eliminate them.
+
+*What Gets You the Role*
+
+* Strong foundation in Python, SQL, and working with modern API architectures.
+* A genuine curiosity for tech, business models, and how software companies scale.
+* 1–3 years of hands-on experience (internships, bootcamps, or heavy personal projects count).
+* *Tangible proof of work:* We care far more about what you can build than where you went to school. A link to your GitHub, a live side project, or a technical write-up where you breakdown a project carries massive weight with us.
+
+*Why Join Us*
+
+* *Zero Bureaucracy:* If a custom script can save 10 hours of manual research, you get the green light to build and deploy it immediately.
+* *Real Leverage:* You won't be formatting pitch books—you will be building systems that drive real enterprise transactions.
+* *High-Signal Environment:* Work alongside a lean, fast-moving team that values execution over face time.
+
+*How to Apply* Skip the templated cover letter—we won't read it. Send your resume along with a link to a project, repo, or article you're proud of, and a brief note on a data automation tool or model you’ve experimented with recently.
+
+All the best.
+
+Pay: $75,000.00-$110,000.00 per year
+
+Benefits:
+* Casual dress
+* Flexible schedule
+
+Work Location: Hybrid remote in Toronto, ON (Toronto District)

@@ -158,6 +158,93 @@ def test_add_project_and_unknown_bullet_id():
         assert "exp.99" in str(e)
 
 
+def test_merge_folds_near_duplicate_job_and_shorter_bullet():
+    base = Profile(
+        experiences=[
+            Item(
+                id="exp.1",
+                title="Data Governance & Quality Co-op",
+                org="Equitable Life of Canada",
+                dates="May 2026 – Aug 2026",
+                bullets=[
+                    Bullet(
+                        id="exp.1.1",
+                        text="Built a Power BI dashboard tracking completeness, accuracy, and timeliness across source systems.",
+                    )
+                ],
+            )
+        ],
+        personal=Personal(links=["https://linkedin.com/in/jane", "https://github.com/jane"]),
+    )
+    incoming = Profile(
+        personal=Personal(links=["linkedin.com/in/jane", "https://www.github.com/jane"]),
+        experiences=[
+            Item(
+                id="exp.9",
+                title="Data Governance & Quality Co-op | Equitable Life of Canada May 2026 – Aug 2026",
+                bullets=[
+                    Bullet(
+                        id="x",
+                        text="Built a Power BI dashboard tracking completeness, accuracy, and timeliness",
+                    )
+                ],
+            )
+        ],
+    )
+    merged, report = ProfileMerger().merge(base, incoming)
+    assert report.new_experiences == 0
+    assert report.new_bullets == 0
+    assert report.duplicates_skipped == 1
+    assert len(merged.experiences) == 1
+    assert merged.experiences[0].id == "exp.1"
+    assert len(merged.personal.links) == 2
+
+
+def test_merge_skips_garbage_parse_blob():
+    base = Profile(
+        experiences=[
+            Item(id="exp.1", title="Engineer", org="Acme", bullets=[Bullet(id="exp.1.1", text="Did a thing.")])
+        ]
+    )
+    incoming = Profile(
+        experiences=[
+            Item(
+                id="exp.9",
+                title="Engineer | Acme Jan 2023 – Present leftover dump of the whole page " + ("x" * 200),
+                location="Built a thing then another job title then awards " * 20,
+            )
+        ]
+    )
+    merged, report = ProfileMerger().merge(base, incoming)
+    assert report.new_experiences == 0
+    assert len(merged.experiences) == 1
+    assert merged.experiences[0].location is None
+
+
+def test_merge_collapses_existing_warehouse_duplicates():
+    base = Profile(
+        experiences=[
+            Item(id="exp.1", title="Engineer", org="Acme", bullets=[Bullet(id="exp.1.1", text="Did a thing.")]),
+            Item(id="exp.5", title="Engineer @ Acme Jan 2023 – Present", org=None, bullets=[]),
+        ]
+    )
+    merged, report = ProfileMerger().merge(base, Profile())
+    assert len(merged.experiences) == 1
+    assert merged.experiences[0].id == "exp.1"
+    assert report.new_experiences == 0
+
+
+def test_merge_education_same_school_different_degree_wording():
+    base = Profile(education=[EducationEntry(school="University of Guelph", degree="B.Eng. Software")])
+    incoming = Profile(
+        education=[EducationEntry(school="University of Guelph", degree="Bachelor of Engineering, Software", details=["GPA 3.97"])]
+    )
+    merged, report = ProfileMerger().merge(base, incoming)
+    assert report.new_education == 0
+    assert len(merged.education) == 1
+    assert "GPA 3.97" in merged.education[0].details
+
+
 def test_counts_line():
     profile = _import(SWE)
     assert warehouse_counts(profile)["experiences"] == 1

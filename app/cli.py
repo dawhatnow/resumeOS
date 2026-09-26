@@ -2,6 +2,7 @@ import typer
 
 from app import cli_ui
 from app.models import Profile
+from app.paste import read_paste
 from app.paths import ResumePathResolver
 from app.store import ProfileStore
 from app.term import ask, confirm, rule, say, say_err, spin
@@ -63,26 +64,27 @@ def init(
     rule("Resume OS")
     say(cli_ui.init_welcome())
 
-    if store.exists():
+    if not store.exists():
+        say("Point me at a resume PDF. One is enough to start; you can add more in a moment.")
+        if path is None:
+            path = ask("Path to a resume PDF (drag a file here or paste)")
+        incoming = _import_pdf(path)
+        store.save(incoming)
+        say(f"[bold green]Imported.[/] {format_counts(incoming)}")
+
+        while confirm("Add another resume PDF to the warehouse?"):
+            extra = ask("Path to the next PDF")
+            incoming = _import_pdf(extra)
+            profile, report = ProfileMerger().merge(store.load(), incoming)
+            store.save(profile)
+            say(f"[bold green]Merged.[/] {report.summary()}")
+
+        rule()
+        say(cli_ui.after_init(store.load(), str(store._path)))
+    else:
         say(cli_ui.already_inited(store.load(), str(store._path)))
-        return
 
-    say("Point me at a resume PDF. One is enough to start; you can add more in a moment.")
-    if path is None:
-        path = ask("Path to a resume PDF (drag a file here or paste)")
-    incoming = _import_pdf(path)
-    store.save(incoming)
-    say(f"[bold green]Imported.[/] {format_counts(incoming)}")
-
-    while confirm("Add another resume PDF to the warehouse?"):
-        extra = ask("Path to the next PDF")
-        incoming = _import_pdf(extra)
-        profile, report = ProfileMerger().merge(store.load(), incoming)
-        store.save(profile)
-        say(f"[bold green]Merged.[/] {report.summary()}")
-
-    rule()
-    say(cli_ui.after_init(store.load(), str(store._path)))
+    _session(store)
 
 
 @app.command("import")
@@ -130,6 +132,106 @@ def show() -> None:
     say(f"[bold]{format_counts(profile)}[/]\n")
     cli_ui.print_profile(profile)
     say(cli_ui.after_show())
+
+
+@app.command("new")
+def new_resume(
+    source: str | None = typer.Argument(
+        None,
+        help="Job URL, path to a .txt/.md JD, or '-' to paste",
+    ),
+) -> None:
+    """Match the warehouse to a job posting. Always prints a pick list (no LLM)."""
+    profile = _load_profile(_store())
+    _match_job(profile, source)
+    say(cli_ui.after_plan())
+
+
+def _session(store: ProfileStore) -> None:
+    while True:
+        say(cli_ui.session_menu())
+        choice = ask("Choose", default="paste").strip().lower()
+        if choice in {"q", "quit", "exit"}:
+            say("[dim]Later. Run [bold cyan]resume init[/] to come back.[/]")
+            return
+        if choice in {"p", "paste", "job", "new"}:
+            _session_paste(store)
+        elif choice in {"u", "update", "merge"}:
+            _session_update(store)
+        elif choice in {"s", "show"}:
+            profile = store.load()
+            rule("Warehouse")
+            say(f"[bold]{format_counts(profile)}[/]\n")
+            cli_ui.print_profile(profile)
+        else:
+            say("[yellow]Type paste, update, show, or quit.[/]")
+
+
+def _session_paste(store: ProfileStore) -> None:
+    say(cli_ui.paste_hint(url_ok=True))
+    text = read_paste(whole_pipe=False)
+    if not text:
+        say("[yellow]Nothing pasted.[/]")
+        return
+    first = text.splitlines()[0].strip()
+    if "\n" not in text and (
+        first.lower().startswith(("http://", "https://")) or ResumePathResolver().resolve(first).exists()
+    ):
+        _match_job(store.load(), first)
+        return
+    _match_job(store.load(), "-", pasted=text)
+
+
+def _session_update(store: ProfileStore) -> None:
+    say("[dim]update:[/]  [bold cyan]pdf[/]  merge a resume   [bold cyan]job[/]  type a job   [bold cyan]project[/]   [bold cyan]bullet[/]   [bold cyan]back[/]")
+    kind = ask("Update how", default="pdf").strip().lower()
+    if kind in {"b", "back"}:
+        return
+    if kind in {"pdf", "resume", "merge"}:
+        path = ask("Path to a resume PDF")
+        incoming = _import_pdf(path)
+        profile, report = ProfileMerger().merge(store.load(), incoming)
+        say(f"[bold]This PDF would add:[/] {report.summary()}")
+        if confirm("Merge it into the warehouse?"):
+            store.save(profile)
+            say(cli_ui.after_merge(report.summary(), profile, str(store._path)))
+        else:
+            say("[yellow]Cancelled.[/] Warehouse unchanged.")
+        return
+    if kind in {"job", "experience"}:
+        experience()
+        return
+    if kind in {"project"}:
+        project()
+        return
+    if kind in {"bullet"}:
+        item_id = ask("Job or project id (e.g. exp.1)")
+        text = ask("Bullet text")
+        bullet(item_id, text)
+        return
+    say("[yellow]Type pdf, job, project, bullet, or back.[/]")
+
+
+def _match_job(profile: Profile, source: str | None, pasted: str | None = None) -> None:
+    from app.apply import JobMatcher
+    from app.fetching.generic import FetchError
+
+    if source is None:
+        source = ask("Job URL, JD file, or '-' to paste")
+    if pasted is None and source.strip() in {"-", "paste"}:
+        say(cli_ui.paste_hint())
+        pasted = read_paste()
+    try:
+        with spin("Matching warehouse to this job…"):
+            posting, analysis, plan = JobMatcher().run(source, profile, pasted=pasted)
+    except FetchError as e:
+        say_err(cli_ui.error(str(e), "paste a JD instead"))
+        return
+    except ValueError as e:
+        say_err(cli_ui.error(str(e)))
+        return
+    rule("Apply")
+    cli_ui.print_plan(posting, analysis, plan, profile)
 
 
 @add_app.callback()
