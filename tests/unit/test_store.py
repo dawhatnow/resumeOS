@@ -46,6 +46,13 @@ def test_round_trip_preserves_data(tmp_path):
     assert loaded.other_sections == {"awards": ["Employee of the Year"]}
 
 
+def test_resume_home_env_overrides_default(tmp_path, monkeypatch):
+    monkeypatch.setenv("RESUME_HOME", str(tmp_path / "demo"))
+    store = ProfileStore()
+    store.save(_profile())
+    assert (tmp_path / "demo" / "profile.yaml").exists()
+
+
 def test_exists_reflects_file_presence(tmp_path):
     store = ProfileStore(path=tmp_path / "profile.yaml")
     assert not store.exists()

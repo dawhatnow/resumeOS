@@ -1,0 +1,75 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 918 >>
+stream
+BT
+/F1 10 Tf
+50 760 Td
+(Jane Doe) Tj
+0 -13 Td
+(jane.doe@example.com | 555-123-4567) Tj
+0 -13 Td
+() Tj
+0 -13 Td
+(Summary) Tj
+0 -13 Td
+(Backend engineer focused on distributed systems.) Tj
+0 -13 Td
+() Tj
+0 -13 Td
+(Experience) Tj
+0 -13 Td
+(Senior Backend Engineer @ Acme Corp Jan 2023 - Present) Tj
+0 -13 Td
+(- Rebuilt the billing pipeline in Go, cutting invoice-generation latency from 12s to 400ms for 50,000+ monthly customers.) Tj
+0 -13 Td
+(- Led migration of the primary datastore from MySQL to PostgreSQL with zero downtime.) Tj
+0 -13 Td
+() Tj
+0 -13 Td
+(Projects) Tj
+0 -13 Td
+(Task Queue § Code Python, Redis, Docker) Tj
+0 -13 Td
+(- Built a distributed task queue supporting 10,000 jobs/sec.) Tj
+0 -13 Td
+() Tj
+0 -13 Td
+(Technical Skills) Tj
+0 -13 Td
+(Python, Go, SQL, PostgreSQL) Tj
+0 -13 Td
+() Tj
+0 -13 Td
+(Education) Tj
+0 -13 Td
+(State University) Tj
+0 -13 Td
+(Bachelor of Science in Computer Science 2020) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000001210 00000 n 
+trailer << /Size 6 /Root 1 0 R >>
+startxref
+1280
+%%EOF

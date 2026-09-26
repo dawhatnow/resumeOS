@@ -1,0 +1,67 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 831 >>
+stream
+BT
+/F1 10 Tf
+50 760 Td
+(Jane Doe) Tj
+0 -13 Td
+(jane.doe@example.com) Tj
+0 -13 Td
+() Tj
+0 -13 Td
+(Experience) Tj
+0 -13 Td
+(Senior Backend Engineer @ Acme Corp Jan 2023 - Present) Tj
+0 -13 Td
+(- Rebuilt the billing pipeline in Go, cutting invoice-generation latency from 12s to 400ms for 50,000+ monthly customers.) Tj
+0 -13 Td
+(- Built a churn model in Python and pandas that flagged at-risk accounts.) Tj
+0 -13 Td
+() Tj
+0 -13 Td
+(Data Analyst @ Contoso Jan 2019 - May 2020) Tj
+0 -13 Td
+(- Analyzed A/B tests in SQL and Python for 200,000 weekly users.) Tj
+0 -13 Td
+() Tj
+0 -13 Td
+(Projects) Tj
+0 -13 Td
+(Churn Predictor § Code Python, pandas, scikit-learn) Tj
+0 -13 Td
+(- Trained a classification model on 2 years of billing data.) Tj
+0 -13 Td
+() Tj
+0 -13 Td
+(Technical Skills) Tj
+0 -13 Td
+(Python, pandas, SQL, scikit-learn) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000001123 00000 n 
+trailer << /Size 6 /Root 1 0 R >>
+startxref
+1193
+%%EOF

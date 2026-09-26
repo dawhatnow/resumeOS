@@ -13,6 +13,6 @@ def strip_bullet(line: str) -> str:
 
 
 def extract_numbers(text: str) -> list[str]:
-    """Numeric claims in a bullet, for the truth guard to check against later.
+    """Numeric claims in a bullet.
     Excludes digits glued onto letters (ResNet18, S3) via the alnum lookbehind."""
     return _NUMBER_RE.findall(text)

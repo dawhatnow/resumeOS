@@ -1,15 +1,10 @@
-"""Data models passed between pipeline stages.
+"""Data models for the career warehouse.
 
-Every stage takes one of these in and returns one out, so stages can be
-tested, cached, or swapped independently (see design spec, "JSON between
-every stage"). Personal/Profile/Item/Bullet/EducationEntry are populated
-today by the import stage; JobPosting/JobAnalysis/ResumePlan/TailoredResume/
-Generation are the shapes the not-yet-built fetch/analyze/plan/write/render
-stages will produce.
+Personal/Profile/Item/Bullet/EducationEntry are populated by import and
+edited by merge/add. This file is the source of truth for those shapes.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
 
 
 @dataclass
@@ -51,7 +46,7 @@ class Personal:
 
 @dataclass
 class Profile:
-    """The user's career profile. Source of truth: built once by import, edited anytime."""
+    """The user's career warehouse. Built by import, grown by merge/add."""
 
     personal: Personal = field(default_factory=Personal)
     summary: str | None = None
@@ -66,66 +61,15 @@ class Profile:
     def all_items(self) -> list[Item]:
         return self.experiences + self.projects
 
+    def find_item(self, item_id: str) -> Item | None:
+        for item in self.all_items():
+            if item.id == item_id:
+                return item
+        return None
+
     def find_bullet(self, source_id: str) -> Bullet | None:
         for item in self.all_items():
             for bullet in item.bullets:
                 if bullet.id == source_id:
                     return bullet
         return None
-
-
-# --- Shapes for not-yet-implemented pipeline stages (fetch/analyze/plan/write) ---
-
-
-@dataclass
-class JobPosting:
-    url: str
-    source: str
-    company: str | None = None
-    title: str | None = None
-    raw_text: str = ""
-    clean_text: str = ""
-    fetched_at: datetime | None = None
-
-
-@dataclass
-class JobAnalysis:
-    must_have: list[str] = field(default_factory=list)
-    nice_to_have: list[str] = field(default_factory=list)
-    keywords: list[str] = field(default_factory=list)
-    missing: list[str] = field(default_factory=list)
-
-
-@dataclass
-class PlannedPick:
-    item_id: str
-    bullet_ids: list[str]
-    reason: str
-
-
-@dataclass
-class ResumePlan:
-    selected: list[PlannedPick] = field(default_factory=list)
-    excluded: list[str] = field(default_factory=list)
-    warnings: list[str] = field(default_factory=list)
-    scores: dict[str, float] = field(default_factory=dict)
-
-
-@dataclass
-class TailoredLine:
-    source_id: str
-    text: str
-
-
-@dataclass
-class TailoredResume:
-    lines: list[TailoredLine] = field(default_factory=list)
-
-
-@dataclass
-class Generation:
-    job: JobPosting
-    plan: ResumePlan
-    resume: TailoredResume
-    pdf_path: str | None = None
-    created_at: datetime | None = None

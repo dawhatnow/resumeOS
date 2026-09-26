@@ -17,9 +17,6 @@ env/
 .coverage
 htmlcov/
 
-# Generated resume output (see app/pipeline.py's _output_path)
-*_Resume.pdf
-
 # Editors / OS
 .vscode/
 .idea/

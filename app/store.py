@@ -1,3 +1,4 @@
+import os
 from dataclasses import asdict
 from pathlib import Path
 
@@ -8,12 +9,19 @@ from app.models import Bullet, EducationEntry, Item, Personal, Profile
 DEFAULT_PROFILE_PATH = Path.home() / ".resume" / "profile.yaml"
 
 
+def default_profile_path() -> Path:
+    """~/.resume/profile.yaml, or $RESUME_HOME/profile.yaml for a throwaway demo."""
+    root = os.environ.get("RESUME_HOME")
+    if root:
+        return Path(root).expanduser() / "profile.yaml"
+    return DEFAULT_PROFILE_PATH
+
+
 class ProfileStore:
-    """Persists the career profile to ~/.resume/profile.yaml — the one
-    place setup writes to and every job run reads from."""
+    """Persists the career warehouse to ~/.resume/profile.yaml."""
 
     def __init__(self, path: Path | None = None) -> None:
-        self._path = path or DEFAULT_PROFILE_PATH
+        self._path = path or default_profile_path()
 
     def exists(self) -> bool:
         return self._path.exists()
@@ -54,42 +62,3 @@ class ProfileStore:
             tech=d.get("tech", []),
             bullets=[Bullet(**b) for b in d.get("bullets", [])],
         )
-
-
-class CacheStore:
-    """Caches fetched job postings (by URL hash) and rewritten bullets (by
-    hash of bullet + keywords) under ~/.resume/cache/, so re-runs and
-    similar jobs don't repeat work or LLM calls."""
-
-    def __init__(self, root: Path | None = None) -> None:
-        self._root = root or (Path.home() / ".resume" / "cache")
-
-    def get_job(self, url_hash: str):
-        raise NotImplementedError("Job cache not yet implemented")
-
-    def put_job(self, url_hash: str, posting) -> None:
-        raise NotImplementedError("Job cache not yet implemented")
-
-    def get_rewrite(self, bullet_hash: str):
-        raise NotImplementedError("Rewrite cache not yet implemented")
-
-    def put_rewrite(self, bullet_hash: str, line) -> None:
-        raise NotImplementedError("Rewrite cache not yet implemented")
-
-
-class HistoryStore:
-    """Saves each generation's posting/analysis/plan/resume JSON and PDF
-    under ~/.resume/history/<id>/, so a crash mid-run can resume from the
-    last saved checkpoint."""
-
-    def __init__(self, root: Path | None = None) -> None:
-        self._root = root or (Path.home() / ".resume" / "history")
-
-    def save(self, generation) -> Path:
-        raise NotImplementedError("History persistence not yet implemented")
-
-    def load(self, generation_id: str):
-        raise NotImplementedError("History persistence not yet implemented")
-
-    def list_ids(self) -> list[str]:
-        raise NotImplementedError("History persistence not yet implemented")
