@@ -23,6 +23,8 @@ dependencies = [
 dev = ["pytest"]
 # Grammar checking with LanguageTool: needs Java 17+, downloads ~260 MB on first use.
 grammar = ["language_tool_python"]
+# Meaning-based matching (fastembed + ONNX, no PyTorch); ~65 MB model on first use.
+embeddings = ["fastembed"]
 
 [project.scripts]
 resume = "app.cli:app"

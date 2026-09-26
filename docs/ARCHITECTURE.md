@@ -110,6 +110,10 @@ under WSL.
   similar"). Degree lines are skipped.
 - `BulletScorer` / `ResumePlanner`: 3 / 2 / 1 per unique term per item,
   bullets ranked by their own text; top 3 jobs, 3 projects, 4 bullets.
+- `SemanticMatcher` (`semantic.py`, optional `[embeddings]` extra): local
+  bge-small via fastembed/ONNX. Bullets close in meaning to a JD
+  requirement line get up to +2 (a keyword must-have is +3). Ranks only —
+  coverage stays keyword-based because that's what an ATS sees.
 - Evals on real postings: `tests/evals/` (see M2.md).
 
 ## M3 — review + PDF (`app/review.py`, `app/guard.py`, `app/render.py`)
@@ -149,6 +153,7 @@ acronyms, your vocabulary and `~/.resume/dictionary.txt` are never typos.
 | `dictionary.txt` | words the proofreader accepts |
 | `cache/rewrites/` | AI rewrites, keyed on model + bullet + job wording |
 | `cache/languagetool/` | LanguageTool download (grammar extra) |
+| `cache/embeddings/` | embedding model + cached bullet vectors (embeddings extra) |
 
 `RESUME_HOME` moves all of it (tests use this).
 
@@ -163,6 +168,8 @@ acronyms, your vocabulary and `~/.resume/dictionary.txt` are never typos.
   untrusted JSON (the AI writer parses its own, defensively).
 - **Typst via the pip package**, not the CLI binary: one install step.
 - **LanguageTool is optional** so the base install stays light for PyPI.
+- **fastembed instead of sentence-transformers** for embeddings: same idea,
+  ONNX instead of PyTorch (~70 MB vs 700 MB+), optional extra.
 
 ## Tests
 

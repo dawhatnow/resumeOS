@@ -8,9 +8,12 @@ class ResumePlanner:
     def __init__(self, budget: dict[str, int] | None = None) -> None:
         self._budget = budget or {"experiences": 3, "projects": 3, "bullets_per_item": 4}
 
-    def plan(self, analysis: JobAnalysis, profile: Profile) -> ResumePlan:
+    def plan(
+        self, analysis: JobAnalysis, profile: Profile, semantic: dict[str, tuple[float, str]] | None = None
+    ) -> ResumePlan:
+        """semantic: bullet id → (meaning bonus, closest JD line), from SemanticMatcher."""
         index = TermIndex(profile_vocabulary(profile))
-        scorer = BulletScorer(index, analysis)
+        scorer = BulletScorer(index, analysis, semantic)
         exp_picks, exp_scores = self._pick(profile.experiences, scorer, self._budget["experiences"])
         proj_picks, proj_scores = self._pick(profile.projects, scorer, self._budget["projects"])
         selected = exp_picks + proj_picks
@@ -28,6 +31,7 @@ class ResumePlanner:
             must_have_total=total,
             covered=[t for t in analysis.must_have + analysis.nice_to_have if index.key(t) in covered],
             bullet_scores=bullet_scores,
+            semantic=bool(semantic),
         )
 
     def _pick(
@@ -45,6 +49,10 @@ class ResumePlanner:
             item_score = scorer.score_item(item, chosen)
             hits = [scorer.display(k) for k in scorer.item_terms(item, chosen)]
             reason = f"matches: {', '.join(hits)}" if hits else "best available overlap"
+            close = scorer.closest_line(chosen)
+            if close:
+                short = close if len(close) <= 60 else close[:57].rsplit(" ", 1)[0] + "…"
+                reason += f" · close to “{short}”"
             ranked.append(
                 PlannedPick(item_id=item.id, bullet_ids=[b.id for b in chosen], reason=reason, score=item_score)
             )

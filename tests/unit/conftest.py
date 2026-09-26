@@ -9,4 +9,5 @@ def _isolated_resume_home(tmp_path, monkeypatch):
     monkeypatch.setenv("RESUME_HOME", str(home))
     for var in ("RESUME_LLM_PROVIDER", "RESUME_LLM_MODEL", "RESUME_PROOFREAD"):
         monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("RESUME_SEMANTIC", "0")  # no model downloads; semantic tests use a fake
     return home

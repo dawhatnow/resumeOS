@@ -85,6 +85,14 @@ class KeywordMatcher:
             [[show(k) for k in g] for g in groups],
         )
 
+    def requirement_lines(self, clean_text: str) -> tuple[list[str], list[str]]:
+        """(requirement + responsibility lines, nice-to-have lines) — whole
+        sentences for meaning-based matching. Short fragments are dropped."""
+        buckets = self._split_sections(clean_text)
+        clean = lambda line: re.sub(r"[*_]{1,2}([^*_]+)[*_]{1,2}", r"\1", line).strip(" *_")
+        keep = lambda text: [clean(l) for l in text.splitlines() if len(l.split()) >= 4]
+        return keep(buckets["must"]) + keep(buckets["body"]), keep(buckets["nice"])
+
     def _split_sections(self, clean_text: str) -> dict[str, str]:
         buckets: dict[str, list[str]] = {"must": [], "nice": [], "body": [], "ignore": []}
         current = "body"

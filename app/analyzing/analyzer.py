@@ -22,8 +22,10 @@ class JobAnalyzer:
         missing = [
             term for term in must if not (requirement_keys(term, groups, index) & inventory)
         ]
+        must_lines, nice_lines = self._keywords.requirement_lines(posting.clean_text)
         return JobAnalysis(
-            must_have=must, nice_to_have=nice, keywords=keywords, missing=missing, alternatives=groups
+            must_have=must, nice_to_have=nice, keywords=keywords, missing=missing, alternatives=groups,
+            must_lines=must_lines, nice_lines=nice_lines,
         )
 
 

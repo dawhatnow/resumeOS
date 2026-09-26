@@ -7,14 +7,19 @@ KEYWORD_WEIGHT = 1.0
 # Per chosen bullet that hits anything; breaks ties toward items with more
 # relevant evidence without rewarding sheer bullet count.
 EVIDENCE_BONUS = 0.5
+# Item-level weight on the average meaning bonus (0–2 per bullet).
+SEMANTIC_ITEM_WEIGHT = 1.5
 
 
 class BulletScorer:
     """Scores by canonical term keys. Terms come from bullet text (not the
     stored bullet.tech tags), so older imports with bad tags still score right."""
 
-    def __init__(self, index: TermIndex, analysis: JobAnalysis) -> None:
+    def __init__(
+        self, index: TermIndex, analysis: JobAnalysis, semantic: dict[str, tuple[float, str]] | None = None
+    ) -> None:
         self._index = index
+        self._semantic = semantic or {}
         self._weights: dict[str, float] = {}
         for weight, terms in (
             (KEYWORD_WEIGHT, analysis.keywords),
@@ -28,7 +33,13 @@ class BulletScorer:
         return self._relevant(self._index.find(bullet.text))
 
     def score_bullet(self, bullet: Bullet) -> float:
-        return sum(self._weights[k] for k in self.bullet_terms(bullet))
+        keyword = sum(self._weights[k] for k in self.bullet_terms(bullet))
+        return keyword + self._semantic.get(bullet.id, (0.0, ""))[0]
+
+    def closest_line(self, bullets: list[Bullet]) -> str:
+        """The JD line the most on-topic of these bullets is closest to."""
+        best = max(bullets, key=lambda b: self._semantic.get(b.id, (0.0, ""))[0], default=None)
+        return self._semantic.get(best.id, (0.0, ""))[1] if best else ""
 
     def item_terms(self, item: Item, bullets: list[Bullet]) -> list[str]:
         """Job-relevant keys backed by the item header, its tech, or these bullets."""
@@ -46,7 +57,9 @@ class BulletScorer:
     def score_item(self, item: Item, bullets: list[Bullet]) -> float:
         unique = sum(self._weights[k] for k in self.item_terms(item, bullets))
         evidence = sum(EVIDENCE_BONUS for b in bullets if self.bullet_terms(b))
-        return unique + evidence
+        # Meaning: average over the chosen bullets, so more bullets ≠ more points.
+        meaning = sum(self._semantic.get(b.id, (0.0, ""))[0] for b in bullets) / max(1, len(bullets))
+        return unique + evidence + SEMANTIC_ITEM_WEIGHT * meaning
 
     def display(self, key: str) -> str:
         return self._index.display(key)

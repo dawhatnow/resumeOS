@@ -96,6 +96,9 @@ class JobAnalysis:
     missing: list[str] = field(default_factory=list)
     # Either/or requirements ("Tableau, Power BI, or similar"): one is enough.
     alternatives: list[list[str]] = field(default_factory=list)
+    # JD requirement/responsibility lines and nice-to-have lines, for meaning-based matching.
+    must_lines: list[str] = field(default_factory=list)
+    nice_lines: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -120,6 +123,7 @@ class ResumePlan:
     bullet_scores: dict[str, float] = field(default_factory=dict)
     edits: dict[str, str] = field(default_factory=dict)
     rewritten: list[str] = field(default_factory=list)  # ids whose edit came from the AI writer
+    semantic: bool = False  # meaning-based scoring was used
 
     @property
     def coverage(self) -> str:
