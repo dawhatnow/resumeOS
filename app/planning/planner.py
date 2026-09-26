@@ -18,6 +18,7 @@ class ResumePlanner:
         excluded = [item.id for item in profile.all_items() if item.id not in selected_ids]
         scores = {**exp_scores, **proj_scores}
         covered = self._covered_keys(profile, selected, scorer)
+        bullet_scores = {b.id: scorer.score_bullet(b) for item in profile.all_items() for b in item.bullets}
         hit, total = self._coverage(analysis, covered, index)
         return ResumePlan(
             selected=selected,
@@ -26,6 +27,7 @@ class ResumePlanner:
             must_have_hit=hit,
             must_have_total=total,
             covered=[t for t in analysis.must_have + analysis.nice_to_have if index.key(t) in covered],
+            bullet_scores=bullet_scores,
         )
 
     def _pick(

@@ -54,6 +54,6 @@ resume new https://example.com/jobs/123
 resume new -
 ```
 
-Prints a Keep list and `Must-haves: 3/9`. Low coverage still ships. PDF export is M3.
+Prints the match, then asks to review the picks and build a one-page PDF (saved to your Desktop). Low coverage still ships. See docs/milestones/M3.md.
 
 Technical guides: `docs/milestones/` (M1 manual stays as-is). Tests: `pytest tests/unit`.

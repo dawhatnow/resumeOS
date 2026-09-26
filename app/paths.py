@@ -29,3 +29,34 @@ class ResumePathResolver:
             return raw
         drive, rest = match.groups()
         return f"/mnt/{drive.lower()}/{rest.replace(chr(92), '/')}"
+
+
+def desktop_dir() -> Path:
+    """Where finished PDFs go. RESUME_OUTPUT_DIR wins; under WSL, the real
+    Windows Desktop (often OneDrive\\Desktop); else ~/Desktop; else cwd."""
+    import os
+    import shutil
+    import subprocess
+
+    override = os.environ.get("RESUME_OUTPUT_DIR")
+    if override:
+        return Path(override).expanduser()
+    if shutil.which("powershell.exe"):
+        try:
+            out = subprocess.run(
+                ["powershell.exe", "-NoProfile", "-Command", "[Environment]::GetFolderPath('Desktop')"],
+                capture_output=True, text=True, timeout=15,
+            ).stdout.strip()
+            path = ResumePathResolver().resolve(out) if out else None
+            if path and path.is_dir():
+                return path
+        except (OSError, subprocess.SubprocessError):
+            pass
+    home_desktop = Path.home() / "Desktop"
+    return home_desktop if home_desktop.is_dir() else Path.cwd()
+
+
+def windows_path(path: Path) -> str | None:
+    """/mnt/c/Users/x → C:\\Users\\x, so WSL users can find the file."""
+    m = re.match(r"^/mnt/([a-z])/(.*)", str(path))
+    return f"{m.group(1).upper()}:\\{m.group(2).replace('/', chr(92))}" if m else None

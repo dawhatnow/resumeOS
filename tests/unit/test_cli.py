@@ -119,7 +119,7 @@ def test_init_loop_paste_then_quit(tmp_path, monkeypatch):
     result = runner.invoke(
         app,
         ["init"],
-        input="paste\nNeed Python and Go.\n\nquit\n",
+        input="paste\nNeed Python and Go.\n\nn\nquit\n",
     )
     assert result.exit_code == 0
     assert "Keep" in result.stdout

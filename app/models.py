@@ -115,6 +115,11 @@ class ResumePlan:
     must_have_total: int = 0
     # Must/nice terms the selected picks back up (directly or implied, e.g. PostgreSQL → SQL).
     covered: list[str] = field(default_factory=list)
+    # M3: relevance per bullet id (fit loop drops the lowest first) and
+    # reviewed rewrites of bullet text, keyed by bullet id.
+    bullet_scores: dict[str, float] = field(default_factory=dict)
+    edits: dict[str, str] = field(default_factory=dict)
+    rewritten: list[str] = field(default_factory=list)  # ids whose edit came from the AI writer
 
     @property
     def coverage(self) -> str:

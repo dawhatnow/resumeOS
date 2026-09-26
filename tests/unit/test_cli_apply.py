@@ -52,7 +52,7 @@ def test_new_from_file_prints_coverage(tmp_path, monkeypatch):
     monkeypatch.setattr("app.cli.ProfileStore", lambda: store)
     jd = tmp_path / "jd.txt"
     jd.write_text("Data Scientist\nRequirements\npandas and SQL required.\n")
-    result = runner.invoke(app, ["new", str(jd)])
+    result = runner.invoke(app, ["new", str(jd), "--no-pdf"])
     assert result.exit_code == 0
     assert "Must-haves:" in result.stdout
     assert "Keep" in result.stdout

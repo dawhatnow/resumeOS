@@ -363,9 +363,42 @@ def _highlight(text: str, index, styles: dict[str, str]) -> Text:
 def after_plan() -> str:
     return next_steps(
         "resume new <url|file|->               try another job",
-        "resume show                           edit the warehouse",
-        "(PDF export is M3 — not built yet)",
+        "resume show                           see the whole warehouse",
     )
+
+
+def default_pdf_name(profile: Profile, posting: JobPosting) -> str:
+    parts = [profile.personal.name or "Resume", posting.title or ""]
+    stem = "_".join(re.sub(r"[^A-Za-z0-9]+", "_", p).strip("_") for p in parts if p)
+    return f"{stem[:80] or 'Resume'}.pdf"
+
+
+def unique_path(folder, name: str):
+    """folder/name.pdf, or name-2.pdf, name-3.pdf… so nothing is overwritten."""
+    from pathlib import Path
+
+    name = Path(name).name or "Resume.pdf"
+    if not name.lower().endswith(".pdf"):
+        name += ".pdf"
+    path = Path(folder) / name
+    n = 2
+    while path.exists():
+        path = Path(folder) / f"{Path(name).stem}-{n}.pdf"
+        n += 1
+    return path
+
+
+def after_render(path, win_path: str | None, result, profile: Profile) -> str:
+    lines = [f"[bold green]Done:[/] one-page PDF saved.", f"      [bold]{esc(win_path or str(path))}[/]"]
+    if result.dropped:
+        dropped = []
+        for did in result.dropped:
+            bullet = profile.find_bullet(did)
+            item = None if bullet else profile.find_item(did)
+            dropped.append(f"{item_id(did)} [dim]{esc((bullet.text if bullet else item.title if item else '')[:60])}…[/]")
+        lines.append(f"      [dim]To fit one page at {result.font_size:g}pt, left out:[/]")
+        lines.extend(f"        {d}" for d in dropped)
+    return "\n".join(lines)
 
 
 def print_profile(profile: Profile) -> None:
@@ -413,3 +446,34 @@ def _print_bullets(item) -> None:
     for bullet in item.bullets:
         grid.add_row(Text("•", style="dim"), Text(bullet.text))
     show(grid)
+
+
+_KIND_STYLE = {"spelling": "red", "grammar": "yellow", "style": "cyan"}
+
+
+def issue_line(issue) -> Text:
+    """'exp.2.3  spelling  …built the dashbord for…  → dashboard'"""
+    color = _KIND_STYLE.get(issue.kind, "white")
+    lo, hi = max(0, issue.start - 30), min(len(issue.text), issue.end + 30)
+    context = Text("…" if lo else "", style="dim")
+    context.append(issue.text[lo:issue.start], style="dim")
+    context.append(issue.text[issue.start:issue.end] or " ", style=f"bold {color} underline")
+    context.append(issue.text[issue.end:hi], style="dim")
+    context.append("…" if hi < len(issue.text) else "", style="dim")
+    line = Text.assemble((f"{issue.where:<9}", "cyan"), (f"{issue.kind:<9}", color), context)
+    line.append(f"\n{' ' * 18}{issue.message}", style="default")
+    if issue.suggestions:
+        line.append("  → ", style="dim")
+        line.append(" / ".join(s or "(remove)" for s in issue.suggestions[:3]), style="green")
+    return line
+
+
+def print_issues(issues, engine: str) -> None:
+    if not issues:
+        say(f"[bold green]✓ No issues found[/] [dim]({esc(engine)})[/]")
+        return
+    counts = {k: sum(1 for i in issues if i.kind == k) for k in ("spelling", "grammar", "style")}
+    summary = "  ".join(f"[{_KIND_STYLE[k]}]{n} {k}[/]" for k, n in counts.items() if n)
+    say(f"[bold]{len(issues)} issue(s):[/] {summary} [dim]({esc(engine)})[/]")
+    for issue in issues:
+        show(issue_line(issue))

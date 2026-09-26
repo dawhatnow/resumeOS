@@ -5,7 +5,7 @@ from app.models import Profile
 from app.paste import read_paste
 from app.paths import ResumePathResolver
 from app.store import ProfileStore
-from app.term import ask, confirm, rule, say, say_err, spin
+from app.term import ask, confirm, esc, rule, say, say_err, show, spin
 from app.warehouse import ProfileMerger, add_bullet, add_experience, add_project, format_counts
 
 app = typer.Typer(
@@ -134,16 +134,112 @@ def show() -> None:
     say(cli_ui.after_show())
 
 
+@app.command()
+def check(
+    fix: bool = typer.Option(False, "--fix", help="Walk through each issue and fix it in the warehouse"),
+) -> None:
+    """Proofread the warehouse: typos, grammar, and resume style (all local)."""
+    from app.proofread import Proofreader, first_languagetool_run, configured_engine, warehouse_texts
+
+    store = _store()
+    profile = _load_profile(store)
+    rule("Proofread")
+    if configured_engine() == "languagetool" and first_languagetool_run():
+        say("[dim]First run: downloading LanguageTool (~260 MB, one time). It runs locally; nothing is uploaded.[/]")
+    with spin("Starting the proofreader…"):
+        reader = Proofreader(profile)
+    if reader.note:
+        say(f"[yellow]{esc(reader.note)}[/]")
+    try:
+        with spin("Checking every bullet…"):
+            issues = reader.check(warehouse_texts(profile))
+        cli_ui.print_issues(issues, reader.engine)
+        if fix and issues:
+            _fix_loop(store, profile, reader)
+        elif issues:
+            say(cli_ui.next_steps("resume check --fix        fix them one by one (saved to the warehouse)"))
+    finally:
+        reader.close()
+
+
+def _fix_loop(store: ProfileStore, profile: Profile, reader) -> None:
+    from app.proofread import add_to_dictionary, apply_fix, warehouse_texts
+    from app.warehouse import refresh_vocabulary
+
+    rule("Fix")
+    say("[dim]For each issue: a number picks a suggestion, [bold]e[/bold] types your own, "
+        "[bold]i[/bold] adds the word to your dictionary, Enter skips, [bold]q[/bold] stops.[/]")
+    changed: dict[str, str] = {}
+    for where, original in warehouse_texts(profile).items():
+        text, skipped = original, set()
+        while True:
+            pending = [i for i in reader.check({where: text}) if (i.snippet, i.message) not in skipped]
+            if not pending:
+                break
+            issue = pending[0]
+            say("")
+            show(cli_ui.issue_line(issue))
+            for n, sug in enumerate(issue.suggestions[:3], 1):
+                say(f"  [bold]{n}[/] {esc(sug or '(remove)')}")
+            choice = ask("fix", default="").strip()
+            if choice.lower() == "q":
+                return _save_fixes(store, profile, changed)
+            if choice.isdigit() and 1 <= int(choice) <= len(issue.suggestions[:3]):
+                text = apply_fix(text, issue, issue.suggestions[int(choice) - 1])
+            elif choice.lower() == "e":
+                new = ask("new text", default=text).strip()
+                if new:
+                    text = new
+                skipped.add((issue.snippet, issue.message))
+            elif choice.lower() == "i" and issue.kind == "spelling":
+                path = add_to_dictionary(issue.snippet)
+                reader.ignore(issue.snippet)
+                say(f"[dim]Added “{esc(issue.snippet)}” to {esc(path)}[/]")
+            else:
+                skipped.add((issue.snippet, issue.message))
+        if text != original:
+            changed[where] = text
+            say(f"[green]✓[/] {esc(where)}: {esc(text)}")
+    _save_fixes(store, profile, changed)
+
+
+def _save_fixes(store: ProfileStore, profile: Profile, changed: dict[str, str]) -> None:
+    from app.warehouse import refresh_vocabulary
+
+    if not changed:
+        say("[dim]No changes.[/]")
+        return
+    if not confirm(f"Save {len(changed)} fixed line(s) to the warehouse?"):
+        say("[yellow]Not saved.[/]")
+        return
+    for where, text in changed.items():
+        if where == "summary":
+            profile.summary = text
+        elif (bullet := profile.find_bullet(where)) is not None:
+            bullet.text = text
+        elif (item := profile.find_item(where)) is not None:
+            item.title = text
+    refresh_vocabulary(profile)
+    store.save(profile)
+    say(f"[bold green]Saved.[/] {len(changed)} line(s) updated in the warehouse.")
+
+
 @app.command("new")
 def new_resume(
     source: str | None = typer.Argument(
         None,
         help="Job URL, path to a .txt/.md JD, or '-' to paste",
     ),
+    pdf: bool | None = typer.Option(
+        None, "--pdf/--no-pdf", help="Go straight to review + PDF, or only print the match (default: ask)"
+    ),
+    rewrite: bool = typer.Option(
+        False, "--rewrite", help="AI-tailor the bullets to the job when review opens (truth-checked; see config.toml)"
+    ),
 ) -> None:
-    """Match the warehouse to a job posting. Always prints a pick list (no LLM)."""
+    """Match the warehouse to a job, review the picks, and build a one-page PDF."""
     profile = _load_profile(_store())
-    _match_job(profile, source)
+    _match_job(profile, source, build_pdf=True if rewrite else pdf, rewrite=rewrite)
     say(cli_ui.after_plan())
 
 
@@ -212,7 +308,13 @@ def _session_update(store: ProfileStore) -> None:
     say("[yellow]Type pdf, job, project, bullet, or back.[/]")
 
 
-def _match_job(profile: Profile, source: str | None, pasted: str | None = None) -> None:
+def _match_job(
+    profile: Profile,
+    source: str | None,
+    pasted: str | None = None,
+    build_pdf: bool | None = None,
+    rewrite: bool = False,
+) -> None:
     from app.apply import JobMatcher
     from app.fetching.generic import FetchError
 
@@ -231,6 +333,52 @@ def _match_job(profile: Profile, source: str | None, pasted: str | None = None) 
         say_err(cli_ui.error(str(e)))
         return
     cli_ui.print_plan(posting, analysis, plan, profile)
+    if build_pdf is None:
+        say("")
+        build_pdf = confirm("Review these picks and build the one-page PDF?")
+    if build_pdf:
+        _review_and_render(profile, posting, analysis, plan, rewrite=rewrite)
+
+
+def _review_and_render(profile: Profile, posting, analysis, plan, rewrite: bool = False) -> None:
+    from app.paths import desktop_dir, windows_path
+    from app.render import RenderError, ResumeRenderer
+    from app.review import PlanReviewer
+
+    def rewriter(bullet_ids: list[str]):
+        from app.ai.provider import load_provider
+        from app.ai.writer import BulletWriter
+
+        return BulletWriter(load_provider(), profile).rewrite(bullet_ids, analysis, posting)
+
+    rule("Review")
+    def proofreader():
+        from app.proofread import Proofreader
+
+        return Proofreader(profile)
+
+    reviewed = PlanReviewer(
+        profile, plan, rewriter=rewriter, rewrite_on_start=rewrite, proofreader=proofreader
+    ).run()
+    if reviewed is None:
+        say("[yellow]Cancelled.[/] No PDF written.")
+        return
+    try:
+        with spin("Building the PDF…"):
+            result = ResumeRenderer().fit(profile, reviewed, analysis.keywords)
+    except RenderError as e:
+        say_err(cli_ui.error(str(e)))
+        return
+    out_dir = desktop_dir()
+    name = ask("File name", default=cli_ui.default_pdf_name(profile, posting))
+    path = cli_ui.unique_path(out_dir, name)
+    try:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(result.pdf)
+    except OSError as e:
+        say_err(cli_ui.error(f"Couldn't write {path}: {e}"))
+        return
+    say(cli_ui.after_render(path, windows_path(path), result, profile))
 
 
 @add_app.callback()
