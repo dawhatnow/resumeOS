@@ -99,6 +99,11 @@ objects on load. Path is `~/.resume/profile.yaml`.
 `ResumePathResolver` accepts `~`, quotes, `file://`, and Windows paths
 under WSL.
 
+## M5 — fetch (`app/fetching/`)
+
+Greenhouse / Lever / Ashby public APIs (no keys), then JSON-LD `JobPosting`
+or page text for any other site; JS-only pages ask you to paste. See M5.md.
+
 ## M2 — match (`app/analyzing/`, `app/planning/`)
 
 - `TermIndex` (`terms.py`): built-in tech lexicon + your vocabulary + your

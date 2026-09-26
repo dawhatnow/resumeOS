@@ -34,3 +34,7 @@ include = ["app*"]
 
 [tool.setuptools.package-data]
 app = ["templates/*.typ"]
+
+[tool.pytest.ini_options]
+markers = ["network: hits real job boards over the internet (run with -m network)"]
+addopts = "-m 'not network'"

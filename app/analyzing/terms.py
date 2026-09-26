@@ -64,6 +64,11 @@ LEXICON: dict[str, list[str]] = {
     "data visualization": ["data visualisation"], "dashboards": ["dashboard"],
     "stakeholder management": [], "statistics": ["statistical analysis"],
     "A/B testing": ["a/b tests", "a/b test"],
+    # security
+    "IAM": ["identity and access management"], "threat modeling": ["threat modelling", "threat models"],
+    "SIEM": [], "penetration testing": ["pentesting", "pen testing"], "zero trust": [],
+    "vulnerability management": [], "incident response": [], "SOC 2": ["soc2"], "OWASP": [],
+    "encryption": [], "anomaly detection": [], "cloud security": [], "application security": ["appsec"],
 }
 LEXICON["data modeling"] += ["star schema", "dimensional modeling", "dimensional modelling"]
 

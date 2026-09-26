@@ -121,7 +121,7 @@ def _heading(line: str) -> tuple[str | None, str]:
     inline content ("Requirements: 3+ years…").
     """
     text = _EMPHASIS.sub("", line)
-    short = len(text.split()) <= 8 and not text.endswith((".", ",", ";"))
+    short = len(text.split()) <= 10 and not text.endswith((".", ",", ";"))
     candidates = [text]
     if short:
         candidates += [_PREFIX_SPLIT.split(text)[-1]]
@@ -134,6 +134,10 @@ def _heading(line: str) -> tuple[str | None, str]:
             if rest.startswith((":", "–", "—")) or rest.startswith("- "):
                 return name, rest.lstrip(":–—- ").strip()
             if short and len(rest.split()) <= 3:
+                return name, ""
+            # "Benefits available to all full-time employees (Global)": skippable
+            # sections get a longer label, as long as it isn't a sentence.
+            if name == "ignore" and len(candidate.split()) <= 10 and not candidate.endswith((".", ",", ";")):
                 return name, ""
     return None, ""
 
