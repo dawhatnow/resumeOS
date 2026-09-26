@@ -148,6 +148,24 @@ repeated verbs) + spelling/grammar from LanguageTool (optional
 `[grammar]` extra, local, en-CA) or an offline word list. Tech names,
 acronyms, your vocabulary and `~/.resume/dictionary.txt` are never typos.
 
+## Formatting (`app/style.py`)
+
+`ResumeStyle(theme, accent, order)` — layout only, never content. Themes:
+classic (New Computer Modern, small caps), modern (bundled Lato, SIL OFL —
+`templates/fonts/`), compact (Libertinus, tight). Accents: navy, teal,
+burgundy, forest, black. Order: education-first / experience-first. Each
+theme sets its own font sizes for the fit loop. Chosen in review with
+`style`, remembered in `~/.resume/style.yaml`; `preview` opens the PDF.
+
+## Terminal UI (`app/fx.py`)
+
+Gradient banner with a glow sweep, Cursor-style `Steps` (spinner, shimmer
+label, live timer, ✓/✗ with duration, progress bar, streaming preview),
+`spin()` with the same look, and a celebration panel when the PDF is saved.
+LanguageTool's download bar and the AI writer's streamed tokens show up
+inside the current step. **Animation only runs on a real terminal** — tests,
+pipes, CI, and `RESUME_PLAIN=1` get plain ✓ lines.
+
 ## Storage — everything under `~/.resume/`
 
 | Path | What |
@@ -156,6 +174,8 @@ acronyms, your vocabulary and `~/.resume/dictionary.txt` are never typos.
 | `config.toml` | `[llm]` provider/model, `[proofread]` engine |
 | `vocab/aliases.yaml` | your extra terms/aliases for matching |
 | `dictionary.txt` | words the proofreader accepts |
+| `style.yaml` | last theme / accent / section order |
+| `cache/preview.pdf` | last `preview` from review |
 | `cache/rewrites/` | AI rewrites, keyed on model + bullet + job wording |
 | `cache/languagetool/` | LanguageTool download (grammar extra) |
 | `cache/embeddings/` | embedding model + cached bullet vectors (embeddings extra) |

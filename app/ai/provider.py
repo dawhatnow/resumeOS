@@ -50,7 +50,8 @@ class LLMProvider:
     model = ""
     local = True
 
-    def complete(self, system: str, user: str) -> str:
+    def complete(self, system: str, user: str, on_text=None) -> str:
+        """on_text(text_so_far) is called as the answer streams in, if given."""
         raise NotImplementedError
 
     @property
@@ -61,7 +62,7 @@ class LLMProvider:
 class NullProvider(LLMProvider):
     """No LLM configured: rewriting is off, bullets stay as written."""
 
-    def complete(self, system: str, user: str) -> str:
+    def complete(self, system: str, user: str, on_text=None) -> str:
         raise ProviderError("No LLM configured. Set [llm] provider in ~/.resume/config.toml (e.g. \"ollama\").")
 
 
@@ -72,7 +73,7 @@ class OpenAICompatibleProvider(LLMProvider):
         self._api_key = api_key
         self._timeout = timeout
 
-    def complete(self, system: str, user: str) -> str:
+    def complete(self, system: str, user: str, on_text=None) -> str:
         import httpx
 
         headers = {"Authorization": f"Bearer {self._api_key}"} if self._api_key else {}
@@ -83,6 +84,8 @@ class OpenAICompatibleProvider(LLMProvider):
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
         }
         try:
+            if on_text is not None:
+                return self._stream(body, headers, on_text)
             r = httpx.post(f"{self._base_url}/chat/completions", json=body, headers=headers, timeout=self._timeout)
         except httpx.ConnectError:
             hint = " Start it with `ollama serve`." if self.name == "ollama" else ""
@@ -91,6 +94,41 @@ class OpenAICompatibleProvider(LLMProvider):
             raise ProviderError(f"{self.label} took longer than {self._timeout:.0f}s. Try fewer bullets (rewrite exp.2).") from None
         except httpx.HTTPError as e:
             raise ProviderError(f"{self.name} request failed: {e}") from None
+        return self._read(r)
+
+    def _stream(self, body: dict, headers: dict, on_text) -> str:
+        """Server-sent events; falls back to the plain body if the server ignores stream."""
+        import json
+
+        import httpx
+
+        text = ""
+        with httpx.stream(
+            "POST", f"{self._base_url}/chat/completions", json={**body, "stream": True},
+            headers=headers, timeout=self._timeout,
+        ) as r:
+            if r.status_code >= 400:
+                r.read()
+                return self._read(r)
+            if "text/event-stream" not in r.headers.get("content-type", ""):
+                r.read()
+                return self._read(r)
+            for line in r.iter_lines():
+                if not line.startswith("data:"):
+                    continue
+                payload = line[5:].strip()
+                if payload == "[DONE]":
+                    break
+                try:
+                    delta = json.loads(payload)["choices"][0].get("delta", {}).get("content") or ""
+                except (ValueError, KeyError, IndexError):
+                    continue
+                if delta:
+                    text += delta
+                    on_text(text)
+        return text
+
+    def _read(self, r) -> str:
         if r.status_code in (401, 403):
             raise ProviderError(f"{self.name} rejected the API key (HTTP {r.status_code}).")
         if r.status_code == 404:

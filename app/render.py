@@ -12,9 +12,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.models import Item, Profile, ResumePlan
+from app.style import ACCENTS, ORDERS, ResumeStyle
 
 TEMPLATE = Path(__file__).parent / "templates" / "resume.typ"
-FONT_SIZES = (10.5, 10.0)
+FONTS = Path(__file__).parent / "templates" / "fonts"  # bundled Lato (SIL OFL) for the modern theme
 MAX_PAGES = 1
 
 
@@ -35,16 +36,28 @@ class ResumeRenderer:
     def __init__(self, template: Path = TEMPLATE) -> None:
         self._template = template
 
-    def fit(self, profile: Profile, plan: ResumePlan, priority_terms: list[str] | None = None) -> RenderResult:
-        """Compile to one page. Mutates nothing: drops happen on a copy."""
+    def fit(
+        self,
+        profile: Profile,
+        plan: ResumePlan,
+        priority_terms: list[str] | None = None,
+        on_progress=None,
+        style: ResumeStyle | None = None,
+    ) -> RenderResult:
+        """Compile to one page. Mutates nothing: drops happen on a copy.
+        on_progress(str) hears about each pass ("pass 3 · 10pt · dropped exp.1.4")."""
+        self._passes = 0
+        self._on_progress = on_progress or (lambda _msg: None)
+        self._style = (style or ResumeStyle()).valid()
+        font_sizes = self._style.spec["sizes"]
         picks = {p.item_id: list(p.bullet_ids) for p in plan.selected}
         order = [p.item_id for p in plan.selected]
         dropped: list[str] = []
-        for size in FONT_SIZES:
+        for size in font_sizes:
             pdf, pages = self._compile(profile, plan, picks, order, size, priority_terms)
             if pages <= MAX_PAGES:
                 return RenderResult(pdf, pages, size, dropped, self._last_data)
-        size = FONT_SIZES[-1]
+        size = font_sizes[-1]
         while True:
             victim = self._lowest(plan, picks, order)
             if victim is None:
@@ -98,12 +111,16 @@ class ResumeRenderer:
         import typst
         from pypdf import PdfReader
 
-        data = build_data(profile, plan, picks, order, size, priority_terms)
+        data = build_data(profile, plan, picks, order, size, priority_terms, getattr(self, "_style", None))
         self._last_data = data
+        self._passes = getattr(self, "_passes", 0) + 1
+        kept = sum(len(picks.get(i, [])) for i in order)
+        getattr(self, "_on_progress", lambda _m: None)(f"pass {self._passes} · {size:g}pt · {kept} bullets")
         try:
             pdf = typst.compile(
                 str(self._template),
                 sys_inputs={"data": json.dumps(data)},
+                font_paths=[str(FONTS)],
                 ignore_system_fonts=True,  # same output on every machine
             )
         except Exception as e:  # typst raises its own error types
@@ -115,7 +132,7 @@ class ResumeRenderer:
 
         png = typst.compile(
             str(self._template), format="png", ppi=ppi,
-            sys_inputs={"data": json.dumps(data)}, ignore_system_fonts=True,
+            sys_inputs={"data": json.dumps(data)}, font_paths=[str(FONTS)], ignore_system_fonts=True,
         )
         return png if isinstance(png, bytes) else png[0]
 
@@ -127,25 +144,34 @@ def build_data(
     order: list[str],
     font_size: float,
     priority_terms: list[str] | None = None,
+    style: ResumeStyle | None = None,
 ) -> dict:
     exp_ids = {i.id for i in profile.experiences}
     # Jobs stay in warehouse (usually reverse-chronological) order; projects
     # in relevance order.
     experiences = [i for i in profile.experiences if i.id in order]
     projects = [profile.find_item(iid) for iid in order if iid not in exp_ids]
+    style = (style or ResumeStyle()).valid()
+    spec = style.spec
+    sections = {
+        "education": {"kind": "education", "entries": [
+            {"school": e.school, "degree": e.degree, "dates": e.dates, "details": list(e.details)}
+            for e in _unique_education(profile)
+        ]},
+        "experience": {"kind": "items", "title": "Experience", "entries": [_entry(i, picks, plan) for i in experiences]},
+        "projects": {"kind": "items", "title": "Projects", "entries": [_entry(i, picks, plan) for i in projects if i]},
+        "skills": {"kind": "skills", "entries": _ordered_skills(profile.skills, priority_terms or [])},
+    }
     return {
         "name": profile.personal.name or "Your Name",
         "font_size": font_size,
+        "style": {
+            "theme": style.theme, "font": spec["font"], "accent": ACCENTS[style.accent],
+            "margin_x": spec["margin"][0], "margin_y": spec["margin"][1],
+            "heading": spec["heading"], "leading": spec["leading"],
+        },
         "contact": contact_line(profile),
-        "sections": [
-            {"kind": "education", "entries": [
-                {"school": e.school, "degree": e.degree, "dates": e.dates, "details": list(e.details)}
-                for e in _unique_education(profile)
-            ]},
-            {"kind": "items", "title": "Experience", "entries": [_entry(i, picks, plan) for i in experiences]},
-            {"kind": "items", "title": "Projects", "entries": [_entry(i, picks, plan) for i in projects if i]},
-            {"kind": "skills", "entries": _ordered_skills(profile.skills, priority_terms or [])},
-        ],
+        "sections": [sections[name] for name in ORDERS[style.order]],
     }
 
 

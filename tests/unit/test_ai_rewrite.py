@@ -36,7 +36,7 @@ class Scripted(LLMProvider):
         self.replies = list(replies)
         self.sent: list[dict] = []
 
-    def complete(self, system: str, user: str) -> str:
+    def complete(self, system: str, user: str, on_text=None) -> str:
         self.sent.append(json.loads(user))
         return json.dumps(self.replies.pop(0))
 
@@ -105,7 +105,7 @@ def test_review_rewrite_marks_and_reset_all():
     feed = iter(["rewrite exp.1", ""])
     out = PlanReviewer(
         p, plan, prompt=lambda *a, **k: next(feed),
-        rewriter=lambda ids: writer.rewrite(ids, ANALYSIS, POSTING),
+        rewriter=lambda ids, **kw: writer.rewrite(ids, ANALYSIS, POSTING, **kw),
     ).run()
     assert out.edits == {"exp.1.1": good} and out.rewritten == ["exp.1.1"]
 
@@ -122,7 +122,7 @@ def test_review_rewrite_leaves_your_edits_alone():
     )
     called = []
     feed = iter(["rewrite", ""])
-    PlanReviewer(p, plan, prompt=lambda *a, **k: next(feed), rewriter=lambda ids: called.append(ids)).run()
+    PlanReviewer(p, plan, prompt=lambda *a, **k: next(feed), rewriter=lambda ids, **kw: called.append(ids)).run()
     assert called == []
 
 
@@ -171,3 +171,11 @@ def test_cache_skips_the_call_and_rechecks(tmp_path):
     changed.experiences[0].bullets[0].text = "Built a queue in Python and Redis handling 10,000 jobs/sec."
     third = BulletWriter(Scripted(_reply(exp_1_1=good), _reply(exp_1_1=good)), changed, cache).rewrite(["exp.1.1"], ANALYSIS, POSTING)
     assert third.cached == 0 and third.calls >= 1
+
+
+def test_stream_preview_reads_half_written_json():
+    from app.review import _stream_preview
+
+    raw = '{"bullets": [{"id": "exp.1.1", "text": "Built a Python queue"}, {"id": "exp.1.2", "text": "Wrote do'
+    assert _stream_preview(raw) == ["exp.1.1 → Built a Python queue", "exp.1.2 → Wrote do"]
+    assert _stream_preview('{"bul') == ["…"]

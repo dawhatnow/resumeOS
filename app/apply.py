@@ -15,19 +15,34 @@ class JobMatcher:
         self._semantic = semantic
 
     def run(self, source: str, profile: Profile, *, pasted: str | None = None) -> tuple[JobPosting, JobAnalysis, ResumePlan]:
-        posting = self._router.resolve(source, pasted=pasted)
-        analysis = self._analyzer.analyze(posting, profile)
-        plan = self._planner.plan(analysis, profile, self._meaning(analysis, profile))
+        posting = self.fetch(source, pasted=pasted)
+        analysis = self.analyze(posting, profile)
+        plan = self.plan(analysis, profile, self.meaning(analysis, profile))
         return posting, analysis, plan
 
-    def _meaning(self, analysis: JobAnalysis, profile: Profile) -> dict[str, tuple[float, str]] | None:
-        from app.analyzing.semantic import SemanticMatcher, semantic_enabled
+    # The stages, separately, so the CLI can show live progress for each.
 
-        matcher = self._semantic
-        if matcher is False or (matcher is None and not semantic_enabled()):
+    def fetch(self, source: str, *, pasted: str | None = None) -> JobPosting:
+        return self._router.resolve(source, pasted=pasted)
+
+    def analyze(self, posting: JobPosting, profile: Profile) -> JobAnalysis:
+        return self._analyzer.analyze(posting, profile)
+
+    def meaning_enabled(self) -> bool:
+        from app.analyzing.semantic import semantic_enabled
+
+        return self._semantic is not False and (self._semantic is not None or semantic_enabled())
+
+    def meaning(self, analysis: JobAnalysis, profile: Profile) -> dict[str, tuple[float, str]] | None:
+        from app.analyzing.semantic import SemanticMatcher
+
+        if not self.meaning_enabled():
             return None
         bullets = {b.id: b.text for item in profile.all_items() for b in item.bullets}
         try:
-            return (matcher or SemanticMatcher()).bonuses(bullets, analysis.must_lines, analysis.nice_lines)
+            return (self._semantic or SemanticMatcher()).bonuses(bullets, analysis.must_lines, analysis.nice_lines)
         except Exception:  # model download blocked, ONNX issue… keywords alone still work
             return None
+
+    def plan(self, analysis: JobAnalysis, profile: Profile, meaning=None) -> ResumePlan:
+        return self._planner.plan(analysis, profile, meaning)

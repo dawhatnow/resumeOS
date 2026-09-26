@@ -142,3 +142,43 @@ def test_review_edit_is_truth_checked():
 def test_review_quit_returns_none():
     p = _profile()
     assert _review(p, _plan(p), "quit") is None
+
+
+# --- styles ---
+
+def test_style_themes_render_one_page_with_their_font(_isolated_resume_home):
+    from app.style import ResumeStyle
+
+    p = _profile()
+    for theme, font in (("classic", "NewCM"), ("modern", "Lato"), ("compact", "Libertinus")):
+        result = ResumeRenderer().fit(p, _plan(p), style=ResumeStyle(theme, "teal", "experience-first"))
+        reader = PdfReader(io.BytesIO(result.pdf))
+        page = reader.pages[0]
+        fonts = " ".join(str(f.get_object()["/BaseFont"]) for f in page["/Resources"]["/Font"].values())
+        assert len(reader.pages) == 1 and font in fonts, (theme, fonts)
+        assert [s["kind"] for s in result.data["sections"]][:2] == ["items", "items"]  # experience first
+        assert result.data["style"]["accent"] == "#0f6b6b"
+
+
+def test_style_saved_and_bad_values_fall_back(_isolated_resume_home):
+    from app.style import ResumeStyle, load_style, save_style, style_path
+
+    assert load_style() == ResumeStyle()
+    save_style(ResumeStyle("modern", "forest", "experience-first"))
+    assert load_style() == ResumeStyle("modern", "forest", "experience-first")
+    style_path().write_text("theme: neon\naccent: rainbow\n")
+    assert load_style() == ResumeStyle()
+
+
+def test_review_style_command(_isolated_resume_home):
+    from app.style import load_style
+
+    p = _profile()
+    feed = iter(["style", "2", "3", "2", "preview", ""])
+    seen = []
+    reviewer = PlanReviewer(p, _plan(p), prompt=lambda *a, **k: next(feed),
+                            previewer=lambda plan, style: seen.append(style.describe()) or "ok")
+    assert reviewer.run() is not None
+    assert reviewer.style.describe() == "modern · burgundy · experience-first"
+    assert seen == ["modern · burgundy · experience-first"]
+    assert load_style() == reviewer.style

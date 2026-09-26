@@ -128,7 +128,6 @@ def home(profile: Profile | None, path: str) -> str:
     counts = format_counts(profile).removeprefix("Warehouse: ")
     return "\n".join(
         [
-            "[bold bright_cyan]Resume OS[/] [dim]— career warehouse[/]",
             "",
             f"[bold]Status:[/] {esc(counts)}",
             f"[dim]File:[/]   {esc(path)}",
@@ -168,7 +167,7 @@ def no_warehouse() -> str:
 def init_welcome() -> str:
     return "\n".join(
         [
-            "[bold bright_cyan]Resume OS[/]",
+            "",
             "[dim]We'll build one warehouse from every resume you have —[/]",
             "[dim]SWE, DS, PM, whatever. Then stay here: paste a job or update.[/]",
             "",
@@ -477,3 +476,21 @@ def print_issues(issues, engine: str) -> None:
     say(f"[bold]{len(issues)} issue(s):[/] {summary} [dim]({esc(engine)})[/]")
     for issue in issues:
         show(issue_line(issue))
+
+
+def celebrate(path, win_path: str | None, result, profile: Profile) -> None:
+    """The finish line: gradient panel with the path, then what was left out."""
+    from rich.panel import Panel
+
+    from app.fx import PALETTE, gradient
+
+    body = Text.assemble(gradient("🎉  Your resume is ready!"), "\n\n", (win_path or str(path), "bold"), "\n",
+                         (f"one page · {result.font_size:g}pt · {len(result.pdf) // 1024} KB", "dim"))
+    show(Panel(body, border_style=PALETTE[2], padding=(1, 3), expand=False))
+    if result.dropped:
+        say(f"[dim]To fit one page, left out:[/]")
+        for did in result.dropped:
+            bullet = profile.find_bullet(did)
+            item = None if bullet else profile.find_item(did)
+            text = bullet.text if bullet else item.title if item else ""
+            show(f"  {item_id(did)} [dim]{esc(text[:70])}{'…' if len(text) > 70 else ''}[/]")

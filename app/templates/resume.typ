@@ -3,21 +3,29 @@
 // so nothing in the warehouse is ever parsed as Typst markup.
 
 #let data = json(bytes(sys.inputs.data))
-#let accent = rgb("#1f3a5f")
+#let st = data.style
+#let accent = rgb(st.accent)
 #let muted = rgb("#555555")
+#let tight = st.theme == "compact"
 
 #set document(title: data.name + " — Resume", author: data.name)
-#set page(paper: data.at("paper", default: "us-letter"), margin: (x: 0.55in, y: 0.45in))
-#set text(font: "New Computer Modern", size: data.font_size * 1pt, hyphenate: false)
-#set par(justify: false, leading: 0.48em, spacing: 0.55em)
-#set list(indent: 0.5em, body-indent: 0.45em, spacing: 0.32em, marker: text(fill: muted)[•])
+#set page(paper: data.at("paper", default: "us-letter"), margin: (x: st.margin_x * 1in, y: st.margin_y * 1in))
+#set text(font: st.font, size: data.font_size * 1pt, hyphenate: false)
+#set par(justify: false, leading: st.leading * 1em, spacing: if tight { 0.45em } else { 0.55em })
+#set list(indent: 0.5em, body-indent: 0.45em, spacing: if tight { 0.3em } else { 0.32em }, marker: text(fill: muted)[•])
 #show link: set text(fill: accent)
 
 #let section(title) = {
-  v(0.45em)
-  text(size: 1.12em, weight: "bold", fill: accent, smallcaps(title))
+  v(if tight { 0.3em } else { 0.45em })
+  if st.heading == "caps" {
+    text(size: 0.95em, weight: "bold", fill: accent, tracking: 0.12em, upper(title))
+  } else if st.heading == "bold" {
+    text(size: 1.05em, weight: "bold", fill: accent, title)
+  } else {
+    text(size: 1.12em, weight: "bold", fill: accent, smallcaps(title))
+  }
   v(-0.45em)
-  line(length: 100%, stroke: 0.6pt + accent)
+  line(length: 100%, stroke: (if st.heading == "caps" { 0.4pt } else { 0.6pt }) + accent)
   v(-0.15em)
 }
 
@@ -31,7 +39,7 @@
 
 // Header
 #align(center)[
-  #text(size: 2.1em, weight: "bold")[#data.name]
+  #text(size: 2.1em, weight: "bold", fill: if st.theme == "modern" { accent } else { black })[#data.name]
   #v(-0.35em)
   #text(size: 0.95em, data.contact.map(c => if c.url == none { c.text } else { link(c.url, c.text) }).join(h(0.35em) + text(fill: muted)[|] + h(0.35em)))
 ]
@@ -53,7 +61,7 @@
       } else { strong(e.title) }
       row(head, maybe(e.dates))
       if e.org != none or e.location != none {
-        v(-0.3em)
+        v(if tight { -0.2em } else { -0.3em })
         row(emph(maybe(e.org)), emph(maybe(e.location)))
       }
       v(-0.2em)

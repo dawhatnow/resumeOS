@@ -214,6 +214,22 @@ class _LanguageToolEngine:
             out.append((m.offset, m.offset + m.error_length, kind, m.message, list(m.replacements[:3])))
         return out
 
+    def check_many(self, texts: list[str]) -> list[list[tuple[int, int, str, str, list[str]]]]:
+        """One LanguageTool request for all texts (much faster than one each),
+        with offsets mapped back to each text."""
+        sep = "\n\n"
+        starts, pos = [], 0
+        for t in texts:
+            starts.append(pos)
+            pos += len(t) + len(sep)
+        combined = self.check(sep.join(texts))
+        out: list[list] = [[] for _ in texts]
+        for start, end, kind, message, suggestions in combined:
+            i = max(n for n, s0 in enumerate(starts) if s0 <= start)
+            if end <= starts[i] + len(texts[i]):
+                out[i].append((start - starts[i], end - starts[i], kind, message, suggestions))
+        return out
+
     def close(self) -> None:
         self._tool.close()
 
@@ -293,6 +309,12 @@ class Proofreader:
     def check(self, texts: dict[str, str]) -> list[Issue]:
         current = {i.id for i in self._profile.all_items() if i.dates and re.search(r"present|now|current", i.dates, re.I)}
         issues: list[Issue] = []
+        found: dict[str, list] = {}
+        if self._engine is not None:
+            keys = [w for w, t in texts.items() if t]
+            batch = getattr(self._engine, "check_many", None)
+            results = batch([texts[k] for k in keys]) if batch else [self._engine.check(texts[k]) for k in keys]
+            found = dict(zip(keys, results))
         for where, text in texts.items():
             if not text:
                 continue
@@ -302,7 +324,7 @@ class Proofreader:
             if self._engine is None:
                 continue
             first_word_end = (re.match(r"\S+", text) or re.match("", text)).end()
-            for start, end, kind, message, suggestions in self._engine.check(text):
+            for start, end, kind, message, suggestions in found.get(where, []):
                 token = text[start:end]
                 if kind == "spelling":
                     word = token.strip("'’")

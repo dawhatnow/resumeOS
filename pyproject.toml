@@ -33,7 +33,7 @@ resume = "app.cli:app"
 include = ["app*"]
 
 [tool.setuptools.package-data]
-app = ["templates/*.typ"]
+app = ["templates/*.typ", "templates/fonts/*"]
 
 [tool.pytest.ini_options]
 markers = ["network: hits real job boards over the internet (run with -m network)"]

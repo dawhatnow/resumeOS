@@ -25,6 +25,8 @@ HELP = [
     ("up exp.2.3", "move a bullet up"),
     ("add proj.3 / drop exp.4", "add or remove a job/project"),
     ("check", "proofread the bullets on the resume (typos, grammar, style)"),
+    ("style", "theme, accent colour, section order (remembered)"),
+    ("preview", "build the PDF now and open it"),
     ("list", "show everything again"),
     ("quit", "cancel, no PDF"),
 ]
@@ -41,7 +43,13 @@ class PlanReviewer:
         rewriter: Callable[[list[str]], "RewriteResult"] | None = None,
         rewrite_on_start: bool = False,
         proofreader: Callable[[], object] | None = None,
+        previewer: Callable[[ResumePlan, "ResumeStyle"], str] | None = None,
+        style: "ResumeStyle | None" = None,
     ) -> None:
+        from app.style import ResumeStyle
+
+        self._previewer = previewer
+        self.style = (style or ResumeStyle()).valid()
         self._proofreader_factory = proofreader
         self._proofreader = None
         self._rewriter = rewriter
@@ -72,6 +80,15 @@ class PlanReviewer:
                         continue
                 self._close()
                 return self._plan
+            if cmd == "style":
+                self._pick_style()
+                continue
+            if cmd == "preview":
+                if self._previewer is None:
+                    say("[yellow]Preview isn't available here.[/]")
+                else:
+                    say(self._previewer(self._plan, self.style))
+                continue
             if cmd == "check":
                 if self._check() is None:
                     say("[yellow]Proofreading isn't available here.[/]")
@@ -149,6 +166,30 @@ class PlanReviewer:
         print_issues(issues, self._proofreader.engine)
         return issues
 
+    def _pick_style(self) -> None:
+        from app.style import ACCENTS, ORDERS, THEME_BLURBS, THEMES, ResumeStyle, save_style
+
+        def choose(title: str, options: list[str], current: str, blurbs: dict | None = None) -> str:
+            say(f"[bold]{title}[/]")
+            for n, opt in enumerate(options, 1):
+                mark = "[green]●[/]" if opt == current else "[dim]○[/]"
+                blurb = f"  [dim]{esc(blurbs[opt])}[/]" if blurbs else ""
+                swatch = f" [{ACCENTS[opt]}]■■[/]" if opt in ACCENTS else ""
+                say(f"  {mark} [bold]{n}[/] {esc(opt)}{swatch}{blurb}")
+            raw = self._prompt(title.lower(), default=str(options.index(current) + 1)).strip()
+            return options[int(raw) - 1] if raw.isdigit() and 1 <= int(raw) <= len(options) else current
+
+        s = self.style
+        theme = choose("Theme", list(THEMES), s.theme, THEME_BLURBS)
+        accent = choose("Accent", list(ACCENTS), s.accent)
+        order = choose("Order", list(ORDERS), s.order)
+        self.style = ResumeStyle(theme, accent, order)
+        try:
+            save_style(self.style)
+        except OSError:
+            pass
+        say(f"[green]✓[/] Style: [bold]{esc(self.style.describe())}[/] [dim](saved; type [bold]preview[/bold] to see it)[/]")
+
     def _close(self) -> None:
         if self._proofreader is not None:
             self._proofreader.close()
@@ -209,9 +250,31 @@ class PlanReviewer:
         ids = [b for b in ids if b not in self._plan.edits or b in self._plan.rewritten]  # keep your own edits
         if not ids:
             return "[dim]Nothing to rewrite (your own edits are left alone).[/]"
+        from app.fx import Steps
+
         try:
-            with spin(f"Rewriting {len(ids)} bullet(s)… local models can take a few minutes"):
-                result = self._rewriter(ids)
+            with Steps() as steps:
+                with steps.step("📝", f"Rewriting {len(ids)} bullet(s) for this job") as s:
+                    s.detail("waiting for the model (a local one loads first)")
+                    first: list[float] = []
+
+                    def on_text(text: str) -> None:
+                        import time
+
+                        now = time.monotonic()
+                        first or first.append(now)
+                        tokens = max(1, len(text) // 4)
+                        rate = tokens / max(0.1, now - first[0])
+                        s.detail(f"{tokens} tokens · {rate:.0f} tok/s")
+                        s.preview("\n".join(_stream_preview(text)), lines=3)
+
+                    result = self._rewriter(ids, on_text=on_text)
+                    s.detail(
+                        f"{result.calls} call(s)" + (f", {result.cached} from cache" if result.cached else "")
+                    )
+                with steps.step("🔒", "Truth-checking every line") as s:
+                    s.detail(f"{len(result.accepted)} passed · {len(result.unchanged)} already fine · "
+                             f"{len(result.rejected)} rejected")
         except ProviderError as e:
             return f"[red]Rewrite failed:[/] {esc(str(e))}"
         for bid, text in result.accepted.items():
@@ -327,3 +390,13 @@ class PlanReviewer:
         width = max(len(c) for c, _ in HELP)
         for command, what in HELP:
             say(f"  [bold cyan]{esc(command)}[/]{' ' * (width - len(command))}  [dim]{esc(what)}[/]")
+
+
+def _stream_preview(raw: str) -> list[str]:
+    """Readable view of a half-written {"bullets": [{"id", "text"}]} answer."""
+    import re
+
+    pairs = re.findall(r'"id"\s*:\s*"([^"]+)"[^{}]*?"text"\s*:\s*"((?:[^"\\]|\\.)*)', raw)
+    if not pairs:
+        return ["…"]
+    return [f"{bid} → {text}" for bid, text in pairs]

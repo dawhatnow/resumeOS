@@ -77,7 +77,9 @@ class BulletWriter:
         self._guard = TruthGuard(profile)
         self._cache = cache if cache is not None else RewriteCache()
 
-    def rewrite(self, bullet_ids: list[str], analysis: JobAnalysis, posting: JobPosting) -> RewriteResult:
+    def rewrite(
+        self, bullet_ids: list[str], analysis: JobAnalysis, posting: JobPosting, on_text=None
+    ) -> RewriteResult:
         """Raises ProviderError if the LLM can't be reached at all."""
         result = RewriteResult()
         wanted = list(dict.fromkeys(analysis.must_have + analysis.nice_to_have + analysis.keywords))
@@ -108,7 +110,7 @@ class BulletWriter:
                 "job_keywords": analysis.must_have + analysis.nice_to_have,
                 "bullets": [self._bullet_payload(bid, wanted, feedback.get(bid)) for bid in todo],
             }
-            raw = self._provider.complete(SYSTEM, json.dumps(payload, ensure_ascii=False))
+            raw = self._provider.complete(SYSTEM, json.dumps(payload, ensure_ascii=False), on_text=on_text)
             result.calls += 1
             answers = _parse(raw)
             retry: list[str] = []

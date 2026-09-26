@@ -60,3 +60,24 @@ def windows_path(path: Path) -> str | None:
     """/mnt/c/Users/x → C:\\Users\\x, so WSL users can find the file."""
     m = re.match(r"^/mnt/([a-z])/(.*)", str(path))
     return f"{m.group(1).upper()}:\\{m.group(2).replace('/', chr(92))}" if m else None
+
+
+def open_file(path: Path) -> bool:
+    """Open a file in the user's default app (Windows viewer under WSL).
+    Returns False if there's no way to do it here."""
+    import shutil
+    import subprocess
+
+    win = windows_path(path)
+    try:
+        if win and shutil.which("explorer.exe"):
+            # explorer.exe returns 1 even on success; don't check.
+            subprocess.Popen(["explorer.exe", win], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return True
+        for opener in ("wslview", "xdg-open", "open"):
+            if shutil.which(opener):
+                subprocess.Popen([opener, str(path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return True
+    except OSError:
+        pass
+    return False

@@ -36,8 +36,39 @@ def rule(title: str | None = None) -> None:
 
 @contextmanager
 def spin(message: str):
-    """Dots spinner while something slow runs (PDF import)."""
-    with console.status(f"[cyan]{message}[/]", spinner="dots"):
+    """Spinner + shimmer while something slow runs. Inside a live Steps block
+    it becomes that step's detail instead of starting a second display."""
+    from app import fx
+
+    steps = fx.active_steps()
+    if steps is not None and steps._steps and steps._steps[-1].state == "run":
+        handle = fx.StepHandle(steps, steps._steps[-1])
+        handle.detail(message.rstrip("…"))
+        yield
+        return
+    if not fx.animated():
+        yield
+        return
+    import time
+
+    from rich.live import Live
+    from rich.spinner import Spinner
+    from rich.text import Text
+
+    start = time.monotonic()
+
+    class _Spin:
+        def __rich__(self):
+            t = time.monotonic()
+            return (
+                Text(" ")
+                .append_text(Spinner("dots", style="bold #00d7ff").render(t))
+                .append(" ")
+                .append_text(fx.shimmer(message, t))
+                .append(f"  {t - start:.1f}s", style="dim #5f87ff")
+            )
+
+    with Live(_Spin(), console=console, refresh_per_second=15, transient=True):
         yield
 
 

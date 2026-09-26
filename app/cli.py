@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import typer
 
 from app import cli_ui
@@ -49,9 +52,11 @@ def _import_pdf(raw_path: str) -> Profile:
 def main(ctx: typer.Context) -> None:
     if ctx.invoked_subcommand is not None:
         return
+    from app.fx import banner
+
     store = _store()
     profile = store.load() if store.exists() else None
-    rule("Resume OS")
+    banner("Your career warehouse → a tailored one-page resume. Local. Truthful. Free. ✨")
     say(cli_ui.home(profile, str(store._path)))
 
 
@@ -60,8 +65,10 @@ def init(
     path: str | None = typer.Argument(None, help="Optional first resume PDF"),
 ) -> None:
     """Start Resume OS: import your resume(s) into the warehouse."""
+    from app.fx import banner
+
     store = _store()
-    rule("Resume OS")
+    banner("Your career warehouse → a tailored one-page resume. Local. Truthful. Free. ✨")
     say(cli_ui.init_welcome())
 
     if not store.exists():
@@ -139,20 +146,32 @@ def check(
     fix: bool = typer.Option(False, "--fix", help="Walk through each issue and fix it in the warehouse"),
 ) -> None:
     """Proofread the warehouse: typos, grammar, and resume style (all local)."""
-    from app.proofread import Proofreader, first_languagetool_run, configured_engine, warehouse_texts
+    from app.proofread import Proofreader, configured_engine, first_languagetool_run, warehouse_texts
+
+    from app.fx import Steps, download_bar, rule_gradient
 
     store = _store()
     profile = _load_profile(store)
-    rule("Proofread")
-    if configured_engine() == "languagetool" and first_languagetool_run():
-        say("[dim]First run: downloading LanguageTool (~260 MB, one time). It runs locally; nothing is uploaded.[/]")
-    with spin("Starting the proofreader…"):
-        reader = Proofreader(profile)
-    if reader.note:
-        say(f"[yellow]{esc(reader.note)}[/]")
+    rule_gradient("Proofread")
+    texts = warehouse_texts(profile)
+    engine = configured_engine()
+    with Steps() as steps:
+        label = "Starting the grammar checker" if engine == "languagetool" else "Loading the spell checker"
+        with steps.step("🔤", label) as s:
+            if engine == "languagetool" and first_languagetool_run():
+                s.detail("first run: downloading LanguageTool (~260 MB, one time, stays local)")
+            with download_bar(s):
+                reader = Proofreader(profile)
+            s.detail(reader.note or reader.engine)
+        try:
+            with steps.step("📝", f"Checking {len(texts)} lines") as s:
+                issues = reader.check(texts)
+                s.detail(f"{len(issues)} issue(s)" if issues else "all clear")
+        except BaseException:
+            reader.close()
+            raise
+    say("")
     try:
-        with spin("Checking every bullet…"):
-            issues = reader.check(warehouse_texts(profile))
         cli_ui.print_issues(issues, reader.engine)
         if fix and issues:
             _fix_loop(store, profile, reader)
@@ -323,15 +342,37 @@ def _match_job(
     if pasted is None and source.strip() in {"-", "paste"}:
         say(cli_ui.paste_hint())
         pasted = read_paste()
+    from app.fx import Steps
+
+    matcher = JobMatcher()
+    is_url = source.strip().lower().startswith(("http://", "https://"))
+    say("")
     try:
-        with spin("Matching warehouse to this job…"):
-            posting, analysis, plan = JobMatcher().run(source, profile, pasted=pasted)
+        with Steps() as steps:
+            icon, label = ("🌐", "Fetching the job posting") if is_url else ("📄", "Reading the job description")
+            with steps.step(icon, label) as s:
+                posting = matcher.fetch(source, pasted=pasted)
+                where = posting.source if posting.source in {"greenhouse", "lever", "ashby"} else ""
+                s.detail(" · ".join(x for x in [where, posting.company, f"{len(posting.raw_text.split())} words"] if x))
+            with steps.step("🔎", "Finding requirements") as s:
+                analysis = matcher.analyze(posting, profile)
+                s.detail(f"{len(analysis.must_have)} must-haves · {len(analysis.nice_to_have)} nice-to-haves")
+            meaning = None
+            if matcher.meaning_enabled():
+                with steps.step("🧠", "Comparing meaning, not just keywords") as s:
+                    s.detail("local model")
+                    meaning = matcher.meaning(analysis, profile)
+                    s.detail(f"{sum(1 for v in (meaning or {}).values() if v[0] > 0)} bullets on-topic" if meaning else "skipped")
+            with steps.step("🧮", "Picking your strongest bullets") as s:
+                plan = matcher.plan(analysis, profile, meaning)
+                s.detail(f"{len(plan.selected)} items · coverage {plan.coverage}")
     except FetchError as e:
-        say_err(cli_ui.error(str(e), "paste a JD instead"))
+        say_err(cli_ui.error(str(e), "resume new -   (then paste the description)"))
         return
     except ValueError as e:
         say_err(cli_ui.error(str(e)))
         return
+    say("")
     cli_ui.print_plan(posting, analysis, plan, profile)
     if build_pdf is None:
         say("")
@@ -345,40 +386,72 @@ def _review_and_render(profile: Profile, posting, analysis, plan, rewrite: bool 
     from app.render import RenderError, ResumeRenderer
     from app.review import PlanReviewer
 
-    def rewriter(bullet_ids: list[str]):
+    def rewriter(bullet_ids: list[str], on_text=None):
         from app.ai.provider import load_provider
         from app.ai.writer import BulletWriter
 
-        return BulletWriter(load_provider(), profile).rewrite(bullet_ids, analysis, posting)
+        return BulletWriter(load_provider(), profile).rewrite(bullet_ids, analysis, posting, on_text=on_text)
 
-    rule("Review")
+    from app.fx import rule_gradient
+
+    rule_gradient("Review")
+
     def proofreader():
         from app.proofread import Proofreader
 
         return Proofreader(profile)
 
-    reviewed = PlanReviewer(
-        profile, plan, rewriter=rewriter, rewrite_on_start=rewrite, proofreader=proofreader
-    ).run()
+    from app.style import load_style
+
+    def previewer(current_plan, style) -> str:
+        from app.paths import open_file
+
+        with spin("Rendering a preview…"):
+            result = ResumeRenderer().fit(profile, current_plan, analysis.keywords, style=style)
+        home = Path(os.environ.get("RESUME_HOME", Path.home() / ".resume")).expanduser()
+        path = home / "cache" / "preview.pdf"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(result.pdf)
+        dropped = f", {len(result.dropped)} bullet(s) left out to fit" if result.dropped else ""
+        opened = "opened" if open_file(path) else "saved"
+        return f"[green]✓[/] Preview {opened}: [bold]{esc(windows_path(path) or str(path))}[/] [dim]({style.describe()}{dropped})[/]"
+
+    reviewer = PlanReviewer(
+        profile, plan, rewriter=rewriter, rewrite_on_start=rewrite, proofreader=proofreader,
+        previewer=previewer, style=load_style(),
+    )
+    reviewed = reviewer.run()
     if reviewed is None:
         say("[yellow]Cancelled.[/] No PDF written.")
         return
+    from app.fx import Steps
+
+    say("")
     try:
-        with spin("Building the PDF…"):
-            result = ResumeRenderer().fit(profile, reviewed, analysis.keywords)
+        with Steps() as steps:
+            with steps.step("📐", "Laying out one page") as s:
+                result = ResumeRenderer().fit(
+                    profile, reviewed, analysis.keywords, on_progress=s.detail, style=reviewer.style
+                )
+                note = f"dropped {len(result.dropped)} to fit" if result.dropped else "fits"
+                s.detail(f"{result.font_size:g}pt · {note}")
+            with steps.step("🔍", "Finding your Desktop") as s:
+                out_dir = desktop_dir()
+                s.detail(windows_path(out_dir) or str(out_dir))
     except RenderError as e:
         say_err(cli_ui.error(str(e)))
         return
-    out_dir = desktop_dir()
     name = ask("File name", default=cli_ui.default_pdf_name(profile, posting))
     path = cli_ui.unique_path(out_dir, name)
     try:
-        out_dir.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(result.pdf)
+        with Steps() as steps, steps.step("💾", "Saving the PDF") as s:
+            out_dir.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(result.pdf)
+            s.detail(f"{len(result.pdf) // 1024} KB")
     except OSError as e:
         say_err(cli_ui.error(f"Couldn't write {path}: {e}"))
         return
-    say(cli_ui.after_render(path, windows_path(path), result, profile))
+    cli_ui.celebrate(path, windows_path(path), result, profile)
 
 
 @add_app.callback()
