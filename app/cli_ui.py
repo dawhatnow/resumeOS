@@ -3,7 +3,7 @@
 import re
 
 from app.models import Profile
-from app.term import esc, item_id, say
+from app.term import DIVIDER, esc, item_id, rule, say
 from app.warehouse import format_counts
 
 
@@ -18,7 +18,7 @@ def item_lines(profile: Profile) -> list[str]:
 
 
 def next_steps(*lines: str) -> str:
-    rendered = ["[bold yellow]Next:[/]"]
+    rendered = [DIVIDER, "[bold yellow]Next:[/]"]
     for line in lines:
         parts = re.split(r"\s{2,}", line.strip(), maxsplit=1)
         if len(parts) == 2:
@@ -35,7 +35,7 @@ def after_create(profile: Profile, saved: str) -> str:
             "[bold green]Done:[/] created the warehouse from that PDF.",
             f"      [bold]{esc(format_counts(profile))}[/]",
             f"      [dim]saved to {esc(saved)}[/]",
-            "",
+            DIVIDER,
             "[bold]In warehouse:[/]",
             items,
             "",
@@ -114,7 +114,7 @@ def home(profile: Profile | None, path: str) -> str:
                 "[bold yellow]Status:[/] empty. Nothing imported yet.",
                 "",
                 next_steps(
-                    "resume import path/to/resume.pdf      create the warehouse",
+                    "resume init                           start — import your resumes",
                 ),
             ]
         )
@@ -126,10 +126,9 @@ def home(profile: Profile | None, path: str) -> str:
             "",
             f"[bold]Status:[/] {esc(counts)}",
             f"[dim]File:[/]   {esc(path)}",
-            "",
+            DIVIDER,
             "[bold]In warehouse:[/]",
             items,
-            "",
             next_steps(
                 "resume import --merge <pdf>           add another resume",
                 "resume add experience                 type a job",
@@ -156,7 +155,57 @@ def add_menu() -> str:
 
 def no_warehouse() -> str:
     return "[bold red]Nothing imported yet.[/]\n\n" + next_steps(
-        "resume import path/to/resume.pdf      create the warehouse",
+        "resume init                           start — import your resumes",
+    )
+
+
+def init_welcome() -> str:
+    return "\n".join(
+        [
+            "[bold bright_cyan]Resume OS[/]",
+            "[dim]We'll build one warehouse from every resume you have —[/]",
+            "[dim]SWE, DS, PM, whatever. Apply comes later; this is setup.[/]",
+            "",
+        ]
+    )
+
+
+def already_inited(profile: Profile, path: str) -> str:
+    items = "\n".join(item_lines(profile))
+    counts = format_counts(profile).removeprefix("Warehouse: ")
+    return "\n".join(
+        [
+            "[bold green]Already set up.[/] Warehouse is ready.",
+            f"[bold]Status:[/] {esc(counts)}",
+            f"[dim]File:[/]   {esc(path)}",
+            DIVIDER,
+            "[bold]In warehouse:[/]",
+            items,
+            next_steps(
+                "resume import --merge <pdf>           add another resume",
+                "resume add experience                 type a job",
+                "resume show                           see full bullets",
+            ),
+        ]
+    )
+
+
+def after_init(profile: Profile, saved: str) -> str:
+    items = "\n".join(item_lines(profile)) or "  [dim](no jobs or projects parsed)[/]"
+    return "\n".join(
+        [
+            "[bold green]Done:[/] warehouse is ready. You can close the terminal and come back anytime.",
+            f"      [bold]{esc(format_counts(profile))}[/]",
+            f"      [dim]saved to {esc(saved)}[/]",
+            DIVIDER,
+            "[bold]In warehouse:[/]",
+            items,
+            next_steps(
+                "resume import --merge <pdf>           add another resume later",
+                "resume add experience                 type work that wasn't on a PDF",
+                "resume show                           see full bullets and IDs",
+            ),
+        ]
     )
 
 
@@ -176,7 +225,7 @@ def print_profile(profile: Profile) -> None:
     say(f"[bold cyan]Links:[/]   {esc(links) if links else '[dim]none found[/]'}")
     say(f"[bold cyan]Summary:[/] {esc(profile.summary) if profile.summary else '[dim]none found[/]'}")
 
-    say("")
+    rule("Experience")
     say(f"[bold blue]Experience ({len(profile.experiences)}):[/]")
     for item in profile.experiences:
         org = f" [dim]@ {esc(item.org)}[/]" if item.org else ""
@@ -185,7 +234,7 @@ def print_profile(profile: Profile) -> None:
         for bullet in item.bullets:
             say(f"    [dim]-[/] {esc(bullet.text)}")
 
-    say("")
+    rule("Projects")
     say(f"[bold magenta]Projects ({len(profile.projects)}):[/]")
     for item in profile.projects:
         tech = f" [green]\\[{esc(', '.join(item.tech))}][/]" if item.tech else ""
@@ -193,7 +242,7 @@ def print_profile(profile: Profile) -> None:
         for bullet in item.bullets:
             say(f"    [dim]-[/] {esc(bullet.text)}")
 
-    say("")
+    rule("Education")
     say(f"[bold blue]Education ({len(profile.education)}):[/]")
     for edu in profile.education:
         say(f"  [bold]{esc(edu.school)}[/] [dim]— {esc(edu.degree)} ({esc(edu.dates)})[/]")

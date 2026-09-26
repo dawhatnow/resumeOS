@@ -4,7 +4,7 @@ from app import cli_ui
 from app.models import Profile
 from app.paths import ResumePathResolver
 from app.store import ProfileStore
-from app.term import ask, confirm, say, say_err
+from app.term import ask, confirm, rule, say, say_err, spin
 from app.warehouse import ProfileMerger, add_bullet, add_experience, add_project, format_counts
 
 app = typer.Typer(
@@ -37,9 +37,10 @@ def _import_pdf(raw_path: str) -> Profile:
 
     path = ResumePathResolver().resolve(raw_path)
     try:
-        return ProfileImporter().import_pdf(path)
+        with spin("Reading PDF…"):
+            return ProfileImporter().import_pdf(path)
     except (FileNotFoundError, ValueError) as e:
-        say_err(cli_ui.error(str(e), "resume import path/to/resume.pdf"))
+        say_err(cli_ui.error(str(e), "resume init"))
         raise typer.Exit(code=1)
 
 
@@ -49,7 +50,39 @@ def main(ctx: typer.Context) -> None:
         return
     store = _store()
     profile = store.load() if store.exists() else None
+    rule("Resume OS")
     say(cli_ui.home(profile, str(store._path)))
+
+
+@app.command()
+def init(
+    path: str | None = typer.Argument(None, help="Optional first resume PDF"),
+) -> None:
+    """Start Resume OS: import your resume(s) into the warehouse."""
+    store = _store()
+    rule("Resume OS")
+    say(cli_ui.init_welcome())
+
+    if store.exists():
+        say(cli_ui.already_inited(store.load(), str(store._path)))
+        return
+
+    say("Point me at a resume PDF. One is enough to start; you can add more in a moment.")
+    if path is None:
+        path = ask("Path to a resume PDF (drag a file here or paste)")
+    incoming = _import_pdf(path)
+    store.save(incoming)
+    say(f"[bold green]Imported.[/] {format_counts(incoming)}")
+
+    while confirm("Add another resume PDF to the warehouse?"):
+        extra = ask("Path to the next PDF")
+        incoming = _import_pdf(extra)
+        profile, report = ProfileMerger().merge(store.load(), incoming)
+        store.save(profile)
+        say(f"[bold green]Merged.[/] {report.summary()}")
+
+    rule()
+    say(cli_ui.after_init(store.load(), str(store._path)))
 
 
 @app.command("import")
@@ -93,9 +126,9 @@ def import_profile(
 def show() -> None:
     """Print the warehouse and item IDs."""
     profile = _load_profile(_store())
+    rule("Warehouse")
     say(f"[bold]{format_counts(profile)}[/]\n")
     cli_ui.print_profile(profile)
-    say("")
     say(cli_ui.after_show())
 
 

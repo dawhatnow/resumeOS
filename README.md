@@ -1,58 +1,47 @@
 # Resume OS — career warehouse (M1)
 
-A local CLI that turns resume PDFs into one warehouse — every job and
-project you will stand behind, not just the last one-pager. Later milestones
-will score that warehouse against a job posting and export a PDF. That is
-not built yet.
+A local CLI. One warehouse for every job and project you will stand behind.
+Later: paste a job, get a truthful one-page PDF. That half is not built yet.
 
-## Try it
+## How users run it (no GitHub clone)
 
-From the repo (uses the venv + fake resumes in `samples/`, does **not**
-touch `~/.resume`):
+They do **not** download the repo onto the desktop. They install the `resume`
+command once, then type `resume init`.
+
+```bash
+# one-time (needs Python 3.11+)
+pipx install resumeos          # after we publish to PyPI (M7)
+
+# until PyPI is up, same idea from the repo URL — still no clone:
+pipx install git+https://github.com/dawhatnow/resumeOS.git
+```
+
+Then anytime:
+
+```bash
+resume init
+```
+
+That starts the app: pick a resume PDF, optionally merge more (DS, PM, …),
+done. Warehouse lives in `~/.resume/profile.yaml`.
+
+```bash
+resume                 # status
+resume show
+resume add experience
+```
+
+`pipx` puts `resume` on their PATH in an isolated env. Not a folder on the
+Desktop.
+
+## Dev (this repo)
 
 ```bash
 source .venv/bin/activate
 pip install -e ".[dev]"
 python scripts/write_sample_pdfs.py
-
 export RESUME_HOME=/tmp/resume-m1-demo
-resume import samples/swe.pdf -y
-resume import --merge samples/ds.pdf -y
-resume show
+resume init samples/swe.pdf
 ```
 
-Your real warehouse is `~/.resume/profile.yaml`. Drop `RESUME_HOME` and
-point `import` at your own PDFs.
-
-```bash
-resume import ~/Downloads/your.pdf -y
-resume import --merge ~/Downloads/another.pdf -y
-resume add experience
-resume show
-```
-
-Technical guides (how it’s coded + which libs): `docs/milestones/`.
-M1 is as-built; M2–M7 are the build plan. New work goes in new modules,
-not `warehouse.py`.
-
-Requires Python 3.11+. Windows / `file://` paths work under WSL.
-
-## Tests
-
-```bash
-pytest tests/unit
-```
-
-## Layout
-
-```
-app/
-  cli.py            import, merge, add, show
-  warehouse.py      merge + typed add
-  models.py         Profile / Item / Bullet
-  store.py          ~/.resume/profile.yaml
-  paths.py          pasted path → Path
-  importing/        PDF → Profile
-tests/unit/
-docs/ARCHITECTURE.md
-```
+Technical guides: `docs/milestones/`. Tests: `pytest tests/unit`.

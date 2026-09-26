@@ -41,7 +41,7 @@ def test_show_without_warehouse_errors(tmp_path, monkeypatch):
     monkeypatch.setattr("app.cli.ProfileStore", lambda: ProfileStore(tmp_path / "profile.yaml"))
     result = runner.invoke(app, ["show"])
     assert result.exit_code == 1
-    assert "resume import" in result.output
+    assert "resume init" in result.output
 
 
 def test_add_bullet_via_cli(tmp_path, monkeypatch):
@@ -87,9 +87,33 @@ def test_bare_resume_shows_status_and_next(tmp_path, monkeypatch):
     assert "Next:" in result.stdout
 
 
+def test_init_skips_when_warehouse_exists(tmp_path, monkeypatch):
+    store = ProfileStore(tmp_path / "profile.yaml")
+    _seed(store)
+    monkeypatch.setattr("app.cli.ProfileStore", lambda: store)
+    result = runner.invoke(app, ["init"])
+    assert result.exit_code == 0
+    assert "Already set up" in result.stdout
+    assert "[exp.1]" in result.stdout
+
+
+def test_init_imports_first_pdf(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    store = ProfileStore(tmp_path / "profile.yaml")
+    monkeypatch.setattr("app.cli.ProfileStore", lambda: store)
+    pdf = Path(__file__).resolve().parents[2] / "samples" / "swe.pdf"
+    result = runner.invoke(app, ["init", str(pdf)], input="n\n")
+    assert result.exit_code == 0
+    assert "Imported." in result.stdout
+    assert "warehouse is ready" in result.stdout
+    assert store.exists()
+    assert store.load().personal.name == "Jane Doe"
+
+
 def test_import_merge_without_warehouse_errors(tmp_path, monkeypatch):
     monkeypatch.setattr("app.cli.ProfileStore", lambda: ProfileStore(tmp_path / "profile.yaml"))
     result = runner.invoke(app, ["import", "--merge", "/tmp/missing.pdf"])
     assert result.exit_code == 1
     assert "Nothing imported yet" in result.output
-    assert "resume import" in result.output
+    assert "resume init" in result.output

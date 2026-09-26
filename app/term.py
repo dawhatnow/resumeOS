@@ -1,5 +1,7 @@
 """One place for all terminal output. Color via Rich; tags strip in tests."""
 
+from contextlib import contextmanager
+
 from rich.console import Console
 from rich.markup import escape
 from rich.prompt import Confirm, Prompt
@@ -7,9 +9,26 @@ from rich.prompt import Confirm, Prompt
 console = Console(highlight=False, soft_wrap=True)
 err_console = Console(stderr=True, highlight=False)
 
+DIVIDER = "[dim]────────────────────────────────────────[/]"
+
 
 def say(message: str = "") -> None:
     console.print(message)
+
+
+def rule(title: str | None = None) -> None:
+    """Full-width line between main blocks only."""
+    if title:
+        console.rule(f"[cyan]{title}[/]", style="dim cyan")
+    else:
+        console.rule(style="dim cyan")
+
+
+@contextmanager
+def spin(message: str):
+    """Dots spinner while something slow runs (PDF import)."""
+    with console.status(f"[cyan]{message}[/]", spinner="dots"):
+        yield
 
 
 def say_err(message: str = "") -> None:
