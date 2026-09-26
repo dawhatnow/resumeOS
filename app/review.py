@@ -226,7 +226,8 @@ class PlanReviewer:
             lines.append(f"[red]✗[/] [cyan]{esc(bid)}[/] [dim]kept original —[/] {esc('; '.join(problems))}")
         summary = (
             f"[bold]Rewrite:[/] {len(result.accepted)} tailored, {len(result.unchanged)} already fine, "
-            f"{len(result.rejected)} rejected by the truth guard [dim]({result.calls} call(s))[/]. "
+            f"{len(result.rejected)} rejected by the truth guard "
+            f"[dim]({result.calls} call(s){f', {result.cached} from cache' if result.cached else ''})[/]. "
             "[dim]reset <id> undoes one, reset all undoes all.[/]"
         )
         return "\n".join(lines + [summary])

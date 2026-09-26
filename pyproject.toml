@@ -17,11 +17,12 @@ dependencies = [
     "beautifulsoup4",
     "typst",
     "pyspellchecker",
-    "language_tool_python",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest"]
+# Grammar checking with LanguageTool: needs Java 17+, downloads ~260 MB on first use.
+grammar = ["language_tool_python"]
 
 [project.scripts]
 resume = "app.cli:app"

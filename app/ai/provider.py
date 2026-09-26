@@ -94,7 +94,11 @@ class OpenAICompatibleProvider(LLMProvider):
         if r.status_code in (401, 403):
             raise ProviderError(f"{self.name} rejected the API key (HTTP {r.status_code}).")
         if r.status_code == 404:
-            raise ProviderError(f"{self.name} doesn't know model '{self.model}'. Set `model` in ~/.resume/config.toml.")
+            available = self.available_models()
+            listed = f" Available: {', '.join(available[:8])}." if available else ""
+            raise ProviderError(
+                f"{self.name} doesn't know model '{self.model}'.{listed} Set `model` in ~/.resume/config.toml."
+            )
         if r.status_code == 429:
             raise ProviderError(f"{self.name} rate limit hit (free tier). Wait a minute and retry.")
         if r.status_code >= 400:
@@ -103,6 +107,27 @@ class OpenAICompatibleProvider(LLMProvider):
             return r.json()["choices"][0]["message"]["content"] or ""
         except (ValueError, KeyError, IndexError):
             raise ProviderError(f"{self.name} sent a response I couldn't read.") from None
+
+
+    def available_models(self) -> list[str]:
+        """Model ids the server offers (GET /models). [] if it can't say."""
+        import httpx
+
+        headers = {"Authorization": f"Bearer {self._api_key}"} if self._api_key else {}
+        try:
+            r = httpx.get(f"{self._base_url}/models", headers=headers, timeout=5)
+            return sorted(str(m.get("id", "")).removeprefix("models/") for m in r.json().get("data", []) if m.get("id"))
+        except (httpx.HTTPError, ValueError, AttributeError):
+            return []
+
+
+def _pick_installed(provider: "OpenAICompatibleProvider", preferred: str) -> str:
+    """Ollama with no model set: the preset if it's installed, else any installed model."""
+    installed = provider.available_models()
+    if not installed or any(m.split(":")[0] == preferred.split(":")[0] for m in installed):
+        return preferred
+    chat = [m for m in installed if "embed" not in m]
+    return (chat or installed)[0]
 
 
 def config_path() -> Path:
@@ -134,8 +159,12 @@ def load_provider(path: Path | None = None) -> LLMProvider:
     api_key = os.environ.get(key_env) if key_env else None
     if key_env and not api_key:
         raise ProviderError(f"{name} needs an API key: export {key_env}=... (get one free on their site).")
-    return OpenAICompatibleProvider(
+    provider = OpenAICompatibleProvider(
         name, base_url, model, api_key,
         local=preset.local if preset else False,
         timeout=float(cfg.get("timeout", preset.timeout if preset else 120.0)),
     )
+    user_chose = os.environ.get("RESUME_LLM_MODEL") or cfg.get("model")
+    if name == "ollama" and not user_chose:
+        provider.model = _pick_installed(provider, model)
+    return provider

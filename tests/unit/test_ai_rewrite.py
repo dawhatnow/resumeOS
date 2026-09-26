@@ -152,3 +152,22 @@ def test_unreachable_server_is_a_clear_error():
     p = OpenAICompatibleProvider("ollama", "http://127.0.0.1:9", "m", None, local=True, timeout=2)
     with pytest.raises(ProviderError, match="ollama serve"):
         p.complete("s", "u")
+
+
+def test_cache_skips_the_call_and_rechecks(tmp_path):
+    from app.ai.writer import RewriteCache
+
+    good = "Built a Python and Redis job queue handling 10,000 jobs/sec for 3 teams."
+    cache = RewriteCache(tmp_path)
+    first = BulletWriter(Scripted(_reply(exp_1_1=good)), _profile(), cache).rewrite(["exp.1.1"], ANALYSIS, POSTING)
+    assert first.calls == 1 and first.cached == 0
+
+    silent = Scripted()  # would raise IndexError if called
+    second = BulletWriter(silent, _profile(), cache).rewrite(["exp.1.1"], ANALYSIS, POSTING)
+    assert second.accepted == {"exp.1.1": good} and second.calls == 0 and second.cached == 1
+
+    # warehouse changed so the cached text no longer passes → asked again
+    changed = _profile()
+    changed.experiences[0].bullets[0].text = "Built a queue in Python and Redis handling 10,000 jobs/sec."
+    third = BulletWriter(Scripted(_reply(exp_1_1=good), _reply(exp_1_1=good)), changed, cache).rewrite(["exp.1.1"], ANALYSIS, POSTING)
+    assert third.cached == 0 and third.calls >= 1

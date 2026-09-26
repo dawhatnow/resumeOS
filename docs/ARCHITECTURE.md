@@ -1,7 +1,23 @@
 # Architecture
 
-M1 is a local warehouse. PDF in, `~/.resume/profile.yaml` out. Merge and
-typed add grow that file. Apply/PDF is not in this tree yet.
+resumeOS turns a job posting into a truthful, tailored, one-page resume PDF,
+locally and for $0. Two halves:
+
+- **Warehouse (M1):** every resume you've written, merged into
+  `~/.resume/profile.yaml`. Inventory, never invented.
+- **Compile (M2, M3, M6):** job posting → match → review → (optional AI
+  rewrite) → truth guard → Typst PDF.
+
+```
+resume new <url|file|->
+  JobSourceRouter ─► JobAnalyzer ─► ResumePlanner ─► print_plan
+  (fetch/paste)      (clean, terms)  (score, pick)      │
+                                                        ▼
+  PDF ◄─ ResumeRenderer ◄─ PlanReviewer ◄─── "build the PDF?"
+  (Typst, fit loop)        (toggle/edit/rewrite/check)
+                               │   every edit / rewrite
+                               └─► TruthGuard (+ Proofreader before build)
+```
 
 ## Principles
 
@@ -13,7 +29,7 @@ typed add grow that file. Apply/PDF is not in this tree yet.
 3. **Small classes.** Import is a facade over parsers. Merge/add live in
    `app/warehouse.py`. The CLI does not contain merge logic.
 
-## Flow
+## Warehouse flow (M1)
 
 ```
 PDF ──► ProfileImporter ──► Profile
@@ -83,13 +99,75 @@ objects on load. Path is `~/.resume/profile.yaml`.
 `ResumePathResolver` accepts `~`, quotes, `file://`, and Windows paths
 under WSL.
 
+## M2 — match (`app/analyzing/`, `app/planning/`)
+
+- `TermIndex` (`terms.py`): built-in tech lexicon + your vocabulary + your
+  `~/.resume/vocab/aliases.yaml`, all resolved to canonical keys. Longest
+  match first with span masking (C++ never also counts as C). Case rules
+  for Go/C/R/REST. `IMPLIES`: PostgreSQL counts as SQL, PyTorch as ML.
+- `KeywordMatcher`: JD sections (Requirements / Nice to have / Benefits…)
+  → must / nice / keywords, plus either/or groups ("Tableau, Power BI, or
+  similar"). Degree lines are skipped.
+- `BulletScorer` / `ResumePlanner`: 3 / 2 / 1 per unique term per item,
+  bullets ranked by their own text; top 3 jobs, 3 projects, 4 bullets.
+- Evals on real postings: `tests/evals/` (see M2.md).
+
+## M3 — review + PDF (`app/review.py`, `app/guard.py`, `app/render.py`)
+
+- **Review** works on a copy of the plan; edits live in `plan.edits` and are
+  never written to the warehouse.
+- **TruthGuard** — `check_bullet` (your edits): no new numbers, no tech the
+  bullet's own job/project doesn't back, length cap. `check_rewrite` (AI):
+  the same, plus no dropped numbers or job keywords.
+- **Renderer** — data goes to `templates/resume.typ` as JSON (never parsed
+  as markup), Typst's embedded fonts only. Fit loop: font step → drop the
+  lowest-scoring bullet → refill what fits. Output to the Windows Desktop
+  under WSL.
+
+## M6 — AI rewrite (`app/ai/`)
+
+`load_provider()` reads `~/.resume/config.toml`; one `OpenAICompatibleProvider`
+covers Ollama (default), Groq, Gemini, OpenRouter. Keys only from env vars.
+`BulletWriter`: cache → one batched call → guard → one retry with reasons →
+original. Accepted answers are cached in `~/.resume/cache/rewrites/` and
+re-verified on reuse.
+
+## Proofreading (`app/proofread.py`)
+
+Style rules in plain code (weak openers, first person, placeholders, tense,
+repeated verbs) + spelling/grammar from LanguageTool (optional
+`[grammar]` extra, local, en-CA) or an offline word list. Tech names,
+acronyms, your vocabulary and `~/.resume/dictionary.txt` are never typos.
+
+## Storage — everything under `~/.resume/`
+
+| Path | What |
+|---|---|
+| `profile.yaml` | the warehouse |
+| `config.toml` | `[llm]` provider/model, `[proofread]` engine |
+| `vocab/aliases.yaml` | your extra terms/aliases for matching |
+| `dictionary.txt` | words the proofreader accepts |
+| `cache/rewrites/` | AI rewrites, keyed on model + bullet + job wording |
+| `cache/languagetool/` | LanguageTool download (grammar extra) |
+
+`RESUME_HOME` moves all of it (tests use this).
+
+## Decisions (where the code differs from the original spec on purpose)
+
+- **Review uses typed commands, not checkboxes.** `exp.2.3` toggles,
+  `edit`/`rewrite`/`check` act on ids you can see — faster from the
+  keyboard than a checkbox list of 30 bullets, and scriptable in tests.
+- **Dataclasses, not Pydantic.** Stage boundaries are still typed models in
+  `app/models.py`; nothing crosses a process or network boundary that
+  would need Pydantic's validation. Revisit if a stage starts reading
+  untrusted JSON (the AI writer parses its own, defensively).
+- **Typst via the pip package**, not the CLI binary: one install step.
+- **LanguageTool is optional** so the base install stays light for PyPI.
+
 ## Tests
 
-`tests/unit/` — import regressions, merge/add, store round-trip, path
-resolution, CLI (`show`, `add`, merge-without-warehouse).
-
-## M2 — apply (added; M1 above is unchanged)
-
-`resume new` → `JobMatcher` (`app/apply.py`): fetch/clean JD, keyword-match
-the warehouse, print a top-N plan. Always prints; coverage is not a gate.
-See `docs/milestones/M2.md`.
+`tests/unit/` (import regressions, merge/add, store, CLI, matcher, guard,
+renderer, review, AI writer, proofreader — isolated `RESUME_HOME` via
+`conftest.py`) and `tests/evals/`
+(real postings; warehouse-side checks run against your own warehouse,
+including the spec targets: one page, nothing invented).

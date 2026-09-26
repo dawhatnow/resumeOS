@@ -215,3 +215,12 @@ def test_bullets_within_item_are_ranked_by_their_own_text():
     analysis = JobAnalyzer().analyze(JobPosting(url="", source="paste", raw_text=BACKEND_JD), profile)
     plan = ResumePlanner(budget={"experiences": 3, "projects": 3, "bullets_per_item": 1}).plan(analysis, profile)
     assert plan.selected[0].bullet_ids == ["proj.1.2"]
+
+
+def test_user_aliases_file(_isolated_resume_home):
+    vocab = _isolated_resume_home / "vocab"
+    vocab.mkdir()
+    (vocab / "aliases.yaml").write_text("Kubernetes: [kube]\nGenesys Cloud: []\n")
+    index = TermIndex([])
+    assert index.find("Ran kube clusters and Genesys Cloud queues.") == ["kubernetes", "genesys cloud"]
+    assert index.display("genesys cloud") == "Genesys Cloud"

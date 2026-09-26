@@ -109,3 +109,25 @@ def test_warehouse_side(name, warehouse):
         assert exp_ids[: len(case["top_experiences"])] == case["top_experiences"], plan.selected
     if "top_experiences_set" in case:
         assert set(exp_ids[: len(case["top_experiences_set"])]) == case["top_experiences_set"]
+
+
+@pytest.mark.parametrize("name", sorted(CASES))
+def test_spec_targets_one_page_and_nothing_invented(name, warehouse):
+    """Spec eval targets: 100% one-page, 0 truth violations — without AI rewriting."""
+    import io
+
+    from pypdf import PdfReader
+
+    from app.render import ResumeRenderer
+
+    posting = JobPosting(url=name, source="file", raw_text=(POSTINGS / name).read_text())
+    analysis = JobAnalyzer().analyze(posting, warehouse)
+    plan = ResumePlanner().plan(analysis, warehouse)
+    result = ResumeRenderer().fit(warehouse, plan, analysis.keywords)
+
+    assert len(PdfReader(io.BytesIO(result.pdf)).pages) == 1
+    sources = {b.text for i in warehouse.all_items() for b in i.bullets}
+    printed = [b for s in result.data["sections"] if s["kind"] == "items" for e in s["entries"] for b in e["bullets"]]
+    assert printed and all(b in sources for b in printed), "a printed bullet isn't in the warehouse"
+    skills = next(s for s in result.data["sections"] if s["kind"] == "skills")["entries"]
+    assert set(skills) <= set(warehouse.skills), "a printed skill isn't in the warehouse"

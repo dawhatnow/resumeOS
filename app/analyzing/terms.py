@@ -7,6 +7,7 @@ before "React", "Node.js" before "JS".
 """
 
 import re
+from pathlib import Path
 
 # Canonical display → aliases. Covers common JD asks the user may *not* have,
 # so they can show up as missing.
@@ -107,6 +108,31 @@ _BEFORE = r"(?<![\w+#])"
 _AFTER = r"(?![\w+#])"
 
 
+def user_lexicon() -> dict[str, list[str]]:
+    """~/.resume/vocab/aliases.yaml — your own terms and aliases, same shape
+    as LEXICON:
+
+        Kubernetes: [kube]          # extra alias for a known term
+        Microsoft Fabric: [fabric]
+        Genesys Cloud: []           # a new term the lexicon doesn't know
+    """
+    import os
+
+    import yaml
+
+    root = os.environ.get("RESUME_HOME")
+    path = (Path(root).expanduser() if root else Path.home() / ".resume") / "vocab" / "aliases.yaml"
+    if not path.exists():
+        return {}
+    try:
+        data = yaml.safe_load(path.read_text()) or {}
+    except yaml.YAMLError:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {str(k): [str(a) for a in (v or [])] if isinstance(v, list) else [] for k, v in data.items()}
+
+
 def _compile_one(body: str) -> re.Pattern:
     return re.compile(f"{_BEFORE}(?:{body}){_AFTER}")
 
@@ -126,6 +152,12 @@ class TermIndex:
             key = _key(display)
             self._display[key] = display
             self._alias_to_key[key] = key
+            for alias in alias_list:
+                self._alias_to_key[_key(alias)] = key
+        for display, alias_list in user_lexicon().items():
+            key = self._alias_to_key.get(_key(display), _key(display))
+            self._display.setdefault(key, display)
+            self._alias_to_key[_key(display)] = key
             for alias in alias_list:
                 self._alias_to_key[_key(alias)] = key
         for alias, target in (aliases or {}).items():

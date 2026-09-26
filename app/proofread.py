@@ -2,9 +2,10 @@
 
 Engines (config.toml `[proofread] engine = "auto" | "languagetool" | "basic" | "off"`):
 - languagetool: LanguageTool (en-CA) running locally on Java. Spelling and
-  grammar. First use downloads it once (~260 MB); nothing is sent anywhere.
+  grammar. Optional: pip install "resumeOS[grammar]". First use downloads it
+  once (~260 MB) into ~/.resume/cache/languagetool; nothing is sent anywhere.
 - basic: offline word-list spell check (no Java needed). Spelling only.
-- auto (default): languagetool if Java is installed, else basic.
+- auto (default): languagetool if it's installed and Java is available, else basic.
 
 Style rules are plain code and always run. Tech names, acronyms, product
 names, and words in ~/.resume/dictionary.txt are never flagged as typos.
@@ -194,7 +195,11 @@ class _LanguageToolEngine:
     name = "languagetool"
 
     def __init__(self) -> None:
-        import language_tool_python
+        languagetool_cache()  # sets LTP_PATH before the library reads it
+        try:
+            import language_tool_python
+        except ImportError:
+            raise RuntimeError('not installed — pip install "resumeOS[grammar]"') from None
 
         self._tool = language_tool_python.LanguageTool("en-CA")
         self._tool.disabled_rules.update(_DISABLED_RULES)
@@ -217,8 +222,27 @@ def java_available() -> bool:
     return shutil.which("java") is not None
 
 
+def languagetool_installed() -> bool:
+    import importlib.util
+
+    return importlib.util.find_spec("language_tool_python") is not None
+
+
+def languagetool_cache() -> Path:
+    """Keep LanguageTool's download under ~/.resume/cache like everything else.
+    Moves an earlier download from ~/.cache instead of fetching 260 MB again."""
+    root = os.environ.get("RESUME_HOME")
+    cache = (Path(root).expanduser() if root else Path.home() / ".resume") / "cache" / "languagetool"
+    legacy = Path.home() / ".cache" / "language_tool_python"
+    if not cache.exists() and legacy.is_dir() and any(legacy.iterdir()):
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(legacy), str(cache))
+    os.environ.setdefault("LTP_PATH", str(cache))
+    return Path(os.environ["LTP_PATH"])
+
+
 def first_languagetool_run() -> bool:
-    cache = Path(os.environ.get("LTP_PATH", Path.home() / ".cache" / "language_tool_python"))
+    cache = languagetool_cache()
     return not cache.exists() or not any(cache.iterdir())
 
 
@@ -233,7 +257,7 @@ def configured_engine() -> str:
             pass
     engine = os.environ.get("RESUME_PROOFREAD", engine).lower()
     if engine == "auto":
-        return "languagetool" if java_available() else "basic"
+        return "languagetool" if java_available() and languagetool_installed() else "basic"
     return engine
 
 
@@ -255,8 +279,9 @@ class Proofreader:
         if name == "languagetool":
             try:
                 self._engine = _LanguageToolEngine()
-            except Exception as e:  # no/old Java, download blocked, …
-                self.note = f"LanguageTool unavailable ({e.__class__.__name__}); using basic spell check."
+            except Exception as e:  # not installed, no/old Java, download blocked, …
+                reason = str(e) if isinstance(e, RuntimeError) else e.__class__.__name__
+                self.note = f"LanguageTool unavailable ({reason}); using basic spell check."
                 name = "basic"
         if name == "basic":
             self._engine = _SpellEngine()
