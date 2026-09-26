@@ -243,6 +243,115 @@ def _save_fixes(store: ProfileStore, profile: Profile, changed: dict[str, str]) 
     say(f"[bold green]Saved.[/] {len(changed)} line(s) updated in the warehouse.")
 
 
+@app.command("ls")
+def list_applications() -> None:
+    """Every resume you've exported, newest first."""
+    from app.applications import ApplicationStore
+
+    apps = ApplicationStore().list()
+    if not apps:
+        say("[dim]No applications yet.[/] Build one with [bold cyan]resume new <url|file|->[/].")
+        return
+    cli_ui.print_applications(apps)
+    say(cli_ui.next_steps(
+        "resume open 1                         back into review for that job (# or part of the id)",
+        "resume export 1                       that exact PDF, onto the Desktop again",
+        "resume status 1 applied               track it: applied, interview, offer, rejected",
+    ))
+
+
+@app.command("open")
+def open_application(
+    app_id: str = typer.Argument(..., help="# from `resume ls`, or a unique part of the id"),
+    rewrite: bool = typer.Option(False, "--rewrite", help="AI-tailor bullets when review opens"),
+) -> None:
+    """Reopen a saved application in review (the job is not fetched again)."""
+    from app.applications import ApplicationStore
+    from app.apply import JobMatcher
+    from app.fx import Steps
+
+    profile = _load_profile(_store())
+    store = ApplicationStore()
+    try:
+        app_ = store.require(app_id)
+    except KeyError as e:
+        say_err(cli_ui.error(e.args[0]))
+        raise typer.Exit(code=1)
+    matcher = JobMatcher()
+    say("")
+    with Steps() as steps:
+        with steps.step("📂", f"Opening {app_.id}") as s:
+            posting = store.load_posting(app_)
+            saved, style, notes = store.load_plan(app_, profile)
+            s.detail(f"saved {app_.updated[:16].replace('T', ' ')} · {style.describe()}")
+        with steps.step("🔎", "Re-reading the job against today's warehouse") as s:
+            analysis = matcher.analyze(posting, profile)
+            meaning = matcher.meaning(analysis, profile)
+            plan = matcher.plan(analysis, profile, meaning)
+            reviewed = matcher._planner.evaluate(analysis, profile, saved.selected, meaning)
+            reviewed.edits, reviewed.rewritten = saved.edits, saved.rewritten
+            s.detail(f"coverage {reviewed.coverage}")
+    for note in notes:
+        say(f"[yellow]•[/] {esc(note)}")
+    say("")
+    cli_ui.print_plan(posting, analysis, reviewed, profile)
+    _review_and_render(profile, posting, analysis, reviewed, rewrite=rewrite, app_id=app_.id, style=style)
+
+
+@app.command("export")
+def export_application(
+    app_id: str = typer.Argument(..., help="# from `resume ls`, or a unique part of the id"),
+) -> None:
+    """Put that application's exact PDF on the Desktop again (re-compiled from what was saved)."""
+    from app.applications import ApplicationStore
+    from app.fx import Steps
+    from app.paths import desktop_dir, windows_path
+    from app.render import RenderError, ResumeRenderer
+
+    store = ApplicationStore()
+    try:
+        app_ = store.require(app_id)
+    except KeyError as e:
+        say_err(cli_ui.error(e.args[0]))
+        raise typer.Exit(code=1)
+    say("")
+    try:
+        with Steps() as steps:
+            with steps.step("📐", "Re-compiling the saved resume") as s:
+                data = store.load_render_data(app_)
+                if data:
+                    pdf, pages = ResumeRenderer().compile_data(data)
+                    s.detail(f"{pages} page(s)")
+                else:  # very old folder without data: copy the PDF as-is
+                    pdf, pages = app_.pdf.read_bytes(), 1
+                    s.detail("copied the saved PDF")
+            with steps.step("💾", "Saving to the Desktop") as s:
+                name = Path(app_.desktop_path).name if app_.desktop_path else f"{app_.id}.pdf"
+                path = desktop_dir() / name  # the same file this application exported before
+                path.write_bytes(pdf)
+                s.detail(windows_path(path) or str(path))
+    except (RenderError, OSError) as e:
+        say_err(cli_ui.error(str(e)))
+        raise typer.Exit(code=1)
+    say(f"[bold green]Done:[/] {esc(windows_path(path) or str(path))}")
+
+
+@app.command("status")
+def set_status(
+    app_id: str = typer.Argument(..., help="# from `resume ls`, or a unique part of the id"),
+    status: str = typer.Argument(..., help="exported | applied | interview | offer | rejected | withdrawn"),
+) -> None:
+    """Track where an application is."""
+    from app.applications import ApplicationStore
+
+    try:
+        app_ = ApplicationStore().set_status(ApplicationStore().require(app_id).id, status.lower())
+    except (KeyError, ValueError) as e:
+        say_err(cli_ui.error(e.args[0]))
+        raise typer.Exit(code=1)
+    say(f"[green]✓[/] {esc(app_.id)} → [bold]{esc(app_.status)}[/]")
+
+
 @app.command("new")
 def new_resume(
     source: str | None = typer.Argument(
@@ -381,7 +490,10 @@ def _match_job(
         _review_and_render(profile, posting, analysis, plan, rewrite=rewrite)
 
 
-def _review_and_render(profile: Profile, posting, analysis, plan, rewrite: bool = False) -> None:
+def _review_and_render(
+    profile: Profile, posting, analysis, plan, rewrite: bool = False, app_id: str | None = None, style=None
+) -> None:
+    """Review → PDF on the Desktop → saved in application history (new, or app_id updated)."""
     from app.paths import desktop_dir, windows_path
     from app.render import RenderError, ResumeRenderer
     from app.review import PlanReviewer
@@ -418,7 +530,7 @@ def _review_and_render(profile: Profile, posting, analysis, plan, rewrite: bool 
 
     reviewer = PlanReviewer(
         profile, plan, rewriter=rewriter, rewrite_on_start=rewrite, proofreader=proofreader,
-        previewer=previewer, style=load_style(),
+        previewer=previewer, style=style or load_style(),
     )
     reviewed = reviewer.run()
     if reviewed is None:
@@ -441,8 +553,18 @@ def _review_and_render(profile: Profile, posting, analysis, plan, rewrite: bool 
     except RenderError as e:
         say_err(cli_ui.error(str(e)))
         return
-    name = ask("File name", default=cli_ui.default_pdf_name(profile, posting))
-    path = cli_ui.unique_path(out_dir, name)
+    from app.applications import ApplicationStore
+
+    store = ApplicationStore()
+    previous = store.get(app_id) if app_id else None
+    if not posting.company and not app_id:
+        posting.company = ask("Company (for your application history)", default="").strip() or None
+    default_name = Path(previous.desktop_path).name if previous and previous.desktop_path else cli_ui.default_pdf_name(profile, posting)
+    name = ask("File name", default=default_name)
+    if previous and previous.desktop_path and Path(name).name == Path(previous.desktop_path).name:
+        path = out_dir / Path(name).name  # reopened: update that application's own PDF
+    else:
+        path = cli_ui.unique_path(out_dir, name)
     try:
         with Steps() as steps, steps.step("💾", "Saving the PDF") as s:
             out_dir.mkdir(parents=True, exist_ok=True)
@@ -451,7 +573,12 @@ def _review_and_render(profile: Profile, posting, analysis, plan, rewrite: bool 
     except OSError as e:
         say_err(cli_ui.error(f"Couldn't write {path}: {e}"))
         return
-    cli_ui.celebrate(path, windows_path(path), result, profile)
+    try:
+        app = store.save(posting, reviewed, reviewer.style, result, profile, desktop_path=path, app_id=app_id)
+    except OSError as e:
+        app = None
+        say_err(cli_ui.error(f"PDF saved, but couldn't save the application history: {e}"))
+    cli_ui.celebrate(path, windows_path(path), result, profile, app_id=app.id if app else None)
 
 
 @add_app.callback()

@@ -44,16 +44,31 @@ export RESUME_HOME=/tmp/resume-m1-demo
 resume init samples/swe.pdf
 ```
 
-## Apply a job (M2)
+## Make a resume for a job
 
 Warehouse must already exist (`resume init`).
 
 ```bash
+resume new https://jobs.lever.co/acme/…      # Greenhouse, Lever, Ashby, most career sites
 resume new ./jd.txt
-resume new https://example.com/jobs/123
-resume new -
+resume new -                                  # paste, then Enter
+resume new <job> --rewrite                    # AI-tailor bullets (truth-checked; see M6.md)
 ```
 
-Prints the match, then asks to review the picks and build a one-page PDF (saved to your Desktop). Low coverage still ships. See docs/milestones/M3.md.
+Shows what the job asks for and your best-matching bullets, then **review**
+(toggle / edit / `rewrite` / `check` / `style` / `preview`) and a one-page
+PDF on your Desktop. Nothing reaches the PDF that your warehouse doesn't back.
 
-Technical guides: `docs/milestones/` (M1 manual stays as-is). Tests: `pytest tests/unit`.
+```bash
+resume ls                # every resume you've made
+resume open 1            # back into review for that job
+resume export 1          # that PDF onto the Desktop again
+resume status 1 applied  # track it
+resume check --fix       # proofread the warehouse
+```
+
+Optional extras: `pip install -e ".[grammar]"` (LanguageTool, needs Java),
+`".[embeddings]"` (meaning-based matching). AI provider: `~/.resume/config.toml`.
+
+Technical guides: `docs/milestones/` and `docs/ARCHITECTURE.md`.
+Tests: `pytest` (unit + evals), `pytest -m network` (live job boards).

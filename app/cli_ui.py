@@ -380,9 +380,10 @@ def unique_path(folder, name: str):
     if not name.lower().endswith(".pdf"):
         name += ".pdf"
     path = Path(folder) / name
+    stem = re.sub(r"-\d+$", "", Path(name).stem)  # "x-2" → next is "x-3", not "x-2-2"
     n = 2
     while path.exists():
-        path = Path(folder) / f"{Path(name).stem}-{n}.pdf"
+        path = Path(folder) / f"{stem}-{n}.pdf"
         n += 1
     return path
 
@@ -478,14 +479,38 @@ def print_issues(issues, engine: str) -> None:
         show(issue_line(issue))
 
 
-def celebrate(path, win_path: str | None, result, profile: Profile) -> None:
+_STATUS_STYLE = {"exported": "cyan", "applied": "blue", "interview": "magenta", "offer": "bold green",
+                 "rejected": "dim red", "withdrawn": "dim"}
+
+
+def print_applications(apps) -> None:
+    """#  role · company (id underneath, dim)   fit   status   date"""
+    from rich.table import Table
+
+    table = Table(show_edge=False, header_style="bold", pad_edge=False, box=None, padding=(0, 2))
+    table.add_column("#", style="bold cyan", justify="right", no_wrap=True)
+    table.add_column("job", ratio=1, overflow="ellipsis")
+    table.add_column("fit", justify="right", no_wrap=True)
+    table.add_column("status", no_wrap=True)
+    table.add_column("date", style="dim", no_wrap=True)
+    for n, a in enumerate(apps, 1):
+        job = Text(a.title or "(untitled)", style="bold")
+        if a.company:
+            job.append(f" · {a.company}", style="default")
+        job.append(f"\n{a.id}", style="dim")
+        table.add_row(str(n), job, a.coverage, Text(f"● {a.status}", style=_STATUS_STYLE.get(a.status, "")), a.updated[:10])
+    show(table)
+
+
+def celebrate(path, win_path: str | None, result, profile: Profile, app_id: str | None = None) -> None:
     """The finish line: gradient panel with the path, then what was left out."""
     from rich.panel import Panel
 
     from app.fx import PALETTE, gradient
 
     body = Text.assemble(gradient("🎉  Your resume is ready!"), "\n\n", (win_path or str(path), "bold"), "\n",
-                         (f"one page · {result.font_size:g}pt · {len(result.pdf) // 1024} KB", "dim"))
+                         (f"one page · {result.font_size:g}pt · {len(result.pdf) // 1024} KB", "dim"),
+                         (f"\n📁 saved as {app_id}  (resume ls · resume open {app_id})" if app_id else "", "dim"))
     show(Panel(body, border_style=PALETTE[2], padding=(1, 3), expand=False))
     if result.dropped:
         say(f"[dim]To fit one page, left out:[/]")

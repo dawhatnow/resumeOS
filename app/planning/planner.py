@@ -14,12 +14,30 @@ class ResumePlanner:
         """semantic: bullet id → (meaning bonus, closest JD line), from SemanticMatcher."""
         index = TermIndex(profile_vocabulary(profile))
         scorer = BulletScorer(index, analysis, semantic)
-        exp_picks, exp_scores = self._pick(profile.experiences, scorer, self._budget["experiences"])
-        proj_picks, proj_scores = self._pick(profile.projects, scorer, self._budget["projects"])
-        selected = exp_picks + proj_picks
+        exp_picks, _ = self._pick(profile.experiences, scorer, self._budget["experiences"])
+        proj_picks, _ = self._pick(profile.projects, scorer, self._budget["projects"])
+        return self.evaluate(analysis, profile, exp_picks + proj_picks, semantic, _scorer=scorer, _index=index)
+
+    def evaluate(
+        self,
+        analysis: JobAnalysis,
+        profile: Profile,
+        selected: list[PlannedPick],
+        semantic: dict[str, tuple[float, str]] | None = None,
+        *,
+        _scorer: BulletScorer | None = None,
+        _index: TermIndex | None = None,
+    ) -> ResumePlan:
+        """Scores, coverage, and bullet scores for a given selection — the one
+        plan() picks, or one saved earlier (reopening an application)."""
+        index = _index or TermIndex(profile_vocabulary(profile))
+        scorer = _scorer or BulletScorer(index, analysis, semantic)
         selected_ids = {p.item_id for p in selected}
         excluded = [item.id for item in profile.all_items() if item.id not in selected_ids]
-        scores = {**exp_scores, **proj_scores}
+        scores = {}
+        for item in profile.all_items():
+            best = sorted(item.bullets, key=scorer.score_bullet, reverse=True)[: self._budget["bullets_per_item"]]
+            scores[item.id] = scorer.score_item(item, best)
         covered = self._covered_keys(profile, selected, scorer)
         bullet_scores = {b.id: scorer.score_bullet(b) for item in profile.all_items() for b in item.bullets}
         hit, total = self._coverage(analysis, covered, index)

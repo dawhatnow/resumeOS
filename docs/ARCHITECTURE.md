@@ -148,6 +148,13 @@ repeated verbs) + spelling/grammar from LanguageTool (optional
 `[grammar]` extra, local, en-CA) or an offline word list. Tech names,
 acronyms, your vocabulary and `~/.resume/dictionary.txt` are never typos.
 
+## M4 — application history (`app/applications.py`)
+
+Each export also writes `~/.resume/applications/<date_company_role>/`
+(job, reviewed plan, printed data, diff vs warehouse, PDF, meta).
+`resume ls / open / export / status`. Reopen re-reads the saved job against
+today's warehouse; export re-compiles the saved data. See M4.md.
+
 ## Formatting (`app/style.py`)
 
 `ResumeStyle(theme, accent, order)` — layout only, never content. Themes:
@@ -175,6 +182,7 @@ pipes, CI, and `RESUME_PLAIN=1` get plain ✓ lines.
 | `vocab/aliases.yaml` | your extra terms/aliases for matching |
 | `dictionary.txt` | words the proofreader accepts |
 | `style.yaml` | last theme / accent / section order |
+| `applications/<id>/` | every exported resume (M4) |
 | `cache/preview.pdf` | last `preview` from review |
 | `cache/rewrites/` | AI rewrites, keyed on model + bullet + job wording |
 | `cache/languagetool/` | LanguageTool download (grammar extra) |

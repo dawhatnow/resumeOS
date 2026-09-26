@@ -127,6 +127,20 @@ class ResumeRenderer:
             raise RenderError(f"Typst failed: {e}") from e
         return pdf, len(PdfReader(io.BytesIO(pdf)).pages)
 
+    def compile_data(self, data: dict) -> tuple[bytes, int]:
+        """Re-compile exactly what was rendered before (saved resume.yaml)."""
+        import typst
+        from pypdf import PdfReader
+
+        try:
+            pdf = typst.compile(
+                str(self._template), sys_inputs={"data": json.dumps(data)},
+                font_paths=[str(FONTS)], ignore_system_fonts=True,
+            )
+        except Exception as e:
+            raise RenderError(f"Typst failed: {e}") from e
+        return pdf, len(PdfReader(io.BytesIO(pdf)).pages)
+
     def preview_png(self, data: dict, ppi: int = 100) -> bytes:
         import typst
 

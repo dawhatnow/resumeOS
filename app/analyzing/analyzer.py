@@ -1,3 +1,5 @@
+import re
+
 from app.analyzing.cleaner import JobDescriptionCleaner
 from app.analyzing.keywords import KeywordMatcher
 from app.analyzing.terms import TermIndex
@@ -11,10 +13,11 @@ class JobAnalyzer:
 
     def analyze(self, posting: JobPosting, profile: Profile) -> JobAnalysis:
         posting.clean_text = self._cleaner.clean(posting.raw_text)
-        if not posting.title:
-            first = posting.clean_text.split("\n", 1)[0].strip()
-            if 0 < len(first) <= 80 and not first.endswith("."):
-                posting.title = first
+        lines = [l.strip() for l in posting.clean_text.split("\n")[:4]]
+        if not posting.title and lines and 0 < len(lines[0]) <= 80 and not lines[0].endswith("."):
+            posting.title = lines[0]
+        if not posting.company:
+            posting.company = _company_line(lines[1:3])
         vocabulary = profile_vocabulary(profile)
         must, nice, keywords, groups = self._keywords.extract(posting.clean_text, vocabulary)
         index = TermIndex(vocabulary)
@@ -58,3 +61,13 @@ def inventory_keys(profile: Profile, index: TermIndex) -> set[str]:
         for bullet in item.bullets:
             found.update(index.find(bullet.text))
     return index.expand(found)
+
+
+def _company_line(lines: list[str]) -> str | None:
+    """'ShyftLabs — Toronto, ON' / 'Moneris | Etobicoke' / 'at Stripe' near the
+    top of a pasted posting → the company name. None if it isn't that shape."""
+    for line in lines:
+        m = re.match(r"^(?:at\s+)?([A-Z][\w&.,' -]{1,40}?)\s*(?:[—–|·]|\s-\s)", line)
+        if m and len(line) <= 80:
+            return m.group(1).strip(" ,")
+    return None
